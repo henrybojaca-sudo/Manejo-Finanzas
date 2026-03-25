@@ -1046,6 +1046,7 @@ elif st.session_state.stage == "survey":
                 f"  {letters[i]}   ·   {opt['text']}",
                 key=f"opt_{question['id']}_{i}",
                 use_container_width=True,
+                help=opt['text'],
             ):
                 st.session_state.answers[question["id"]] = {"score": opt["score"], "tag": opt["tag"], "text": opt["text"]}
                 sec = st.session_state.current_section

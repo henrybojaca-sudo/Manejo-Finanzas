@@ -763,16 +763,19 @@ Maestría en Marketing
     return body
 
 def send_email_smtp(to_email, subject, body, smtp_server, smtp_port, sender_email, sender_password):
+    from email.header import Header
     msg = MIMEMultipart()
     msg["From"] = sender_email
     msg["To"] = to_email
-    msg["Subject"] = subject
-    msg.attach(MIMEText(body, "plain", "utf-8"))
+    msg["Subject"] = Header(subject, "utf-8")
+    # Clean body: replace non-breaking spaces and ensure clean UTF-8
+    clean_body = body.replace("\xa0", " ").replace("\u00a0", " ")
+    msg.attach(MIMEText(clean_body, "plain", "utf-8"))
     try:
         with smtplib.SMTP(smtp_server, smtp_port) as server:
             server.starttls()
             server.login(sender_email, sender_password)
-            server.send_message(msg)
+            server.sendmail(sender_email, to_email, msg.as_string())
         return True, ""
     except Exception as e:
         return False, str(e)

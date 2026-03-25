@@ -20,7 +20,7 @@ st.set_page_config(
 )
 
 # ──────────────────────────────────────────────
-# CUSTOM CSS
+# CUSTOM CSS — compact, no wasted space
 # ──────────────────────────────────────────────
 st.markdown("""
 <style>
@@ -31,34 +31,33 @@ st.markdown("""
         background: linear-gradient(145deg, #0a0a1a 0%, #1a1a3e 40%, #0d0d2b 100%);
         font-family: 'DM Sans', sans-serif;
     }
-    
     [data-testid="stSidebar"] {
         background: #0d0d2b;
         border-right: 1px solid rgba(255,255,255,0.06);
     }
-    
     h1, h2, h3, h4, h5, h6, p, span, div, label {
         font-family: 'DM Sans', sans-serif !important;
     }
 
-    /* ── Hide Streamlit defaults ── */
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    header {visibility: hidden;}
-    .stDeployButton {display: none;}
-    [data-testid="stDecoration"] {display: none;}
-
-    /* ── Custom Header ── */
-    .finpulse-header {
-        padding: 16px 0;
-        margin-bottom: 20px;
-        border-bottom: 1px solid rgba(255,255,255,0.06);
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
+    /* ── Kill ALL Streamlit default spacing ── */
+    #MainMenu, footer, header, .stDeployButton, [data-testid="stDecoration"] {
+        display: none !important;
+        visibility: hidden !important;
     }
+    .block-container {
+        padding-top: 1rem !important;
+        padding-bottom: 1rem !important;
+    }
+    [data-testid="stVerticalBlock"] > div:first-child {
+        padding-top: 0 !important;
+    }
+    div[data-testid="stHorizontalBlock"] {
+        gap: 8px;
+    }
+
+    /* ── Logo ── */
     .finpulse-logo {
-        font-size: 22px;
+        font-size: 20px;
         font-weight: 700;
         letter-spacing: -0.5px;
         background: linear-gradient(135deg, #4ECDC4, #C77DFF);
@@ -66,15 +65,39 @@ st.markdown("""
         -webkit-text-fill-color: transparent;
     }
 
-    /* ── Welcome ── */
+    /* ── Welcome — two-column hero ── */
+    .welcome-hero {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 48px;
+        padding: 16px 0;
+        min-height: calc(100vh - 120px);
+    }
+    .welcome-left {
+        flex: 1;
+        max-width: 480px;
+    }
+    .welcome-right {
+        flex: 1;
+        max-width: 400px;
+    }
+    .welcome-emoji {
+        font-size: 44px;
+        animation: floater 3s ease-in-out infinite;
+        margin-bottom: 10px;
+    }
+    @keyframes floater {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-8px); }
+    }
     .welcome-title {
-        font-size: 40px;
+        font-size: 34px;
         font-weight: 700;
-        letter-spacing: -1.5px;
+        letter-spacing: -1.2px;
         line-height: 1.15;
-        text-align: center;
         color: #E8E8F0;
-        margin-bottom: 4px;
+        margin-bottom: 8px;
     }
     .welcome-gradient {
         background: linear-gradient(135deg, #4ECDC4, #FFD93D);
@@ -82,22 +105,39 @@ st.markdown("""
         -webkit-text-fill-color: transparent;
     }
     .welcome-sub {
-        text-align: center;
         color: rgba(255,255,255,0.45);
-        font-size: 15px;
-        max-width: 460px;
-        margin: 0 auto 36px;
+        font-size: 14px;
         line-height: 1.6;
-    }
-    .emoji-float {
-        text-align: center;
-        font-size: 60px;
-        animation: floater 3s ease-in-out infinite;
         margin-bottom: 20px;
     }
-    @keyframes floater {
-        0%, 100% { transform: translateY(0); }
-        50% { transform: translateY(-12px); }
+    .welcome-sections {
+        display: flex;
+        gap: 20px;
+        flex-wrap: wrap;
+        margin-top: 16px;
+    }
+    .welcome-section-item {
+        text-align: center;
+        opacity: 0.5;
+    }
+    .welcome-section-item .ws-icon { font-size: 22px; }
+    .welcome-section-item .ws-label { font-size: 9px; color: rgba(255,255,255,0.35); margin-top: 2px; }
+    .form-card {
+        background: rgba(255,255,255,0.03);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 16px;
+        padding: 28px 24px;
+    }
+    .form-title {
+        font-size: 16px;
+        font-weight: 600;
+        color: #E8E8F0;
+        margin-bottom: 4px;
+    }
+    .form-sub {
+        font-size: 12px;
+        color: rgba(255,255,255,0.35);
+        margin-bottom: 16px;
     }
 
     /* ── Section Badge ── */
@@ -105,85 +145,45 @@ st.markdown("""
         display: inline-flex;
         align-items: center;
         gap: 10px;
-        padding: 8px 16px;
-        border-radius: 12px;
-        margin-bottom: 20px;
+        padding: 6px 14px;
+        border-radius: 10px;
+        margin-bottom: 16px;
     }
-    .section-icon {
-        font-size: 28px;
-    }
+    .section-icon { font-size: 24px; }
     .section-label {
-        font-size: 12px;
+        font-size: 11px;
         font-weight: 600;
         letter-spacing: 1.5px;
         text-transform: uppercase;
     }
 
-    /* ── Question Card ── */
+    /* ── Question ── */
     .question-text {
-        font-size: 22px;
+        font-size: 20px;
         font-weight: 600;
         color: #E8E8F0;
         line-height: 1.4;
         letter-spacing: -0.3px;
-        margin-bottom: 28px;
-    }
-
-    /* ── Option Buttons ── */
-    .option-btn {
-        display: flex;
-        align-items: center;
-        gap: 14px;
-        width: 100%;
-        padding: 16px 20px;
-        border-radius: 14px;
-        border: 1px solid rgba(255,255,255,0.08);
-        background: rgba(255,255,255,0.03);
-        color: #E8E8F0;
-        font-size: 14px;
-        line-height: 1.5;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        margin-bottom: 10px;
-        text-align: left;
-    }
-    .option-btn:hover {
-        background: rgba(255,255,255,0.07);
-        border-color: rgba(255,255,255,0.18);
-        transform: translateX(4px);
-    }
-    .option-letter {
-        width: 30px;
-        height: 30px;
-        border-radius: 8px;
-        border: 1.5px solid rgba(255,255,255,0.15);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 12px;
-        font-family: 'Space Mono', monospace;
-        font-weight: 700;
-        color: rgba(255,255,255,0.35);
-        flex-shrink: 0;
+        margin-bottom: 20px;
     }
 
     /* ── Progress dots ── */
     .progress-dots {
         display: flex;
         justify-content: center;
-        gap: 5px;
-        margin-top: 32px;
+        gap: 4px;
+        margin-top: 24px;
         flex-wrap: wrap;
     }
     .dot {
-        width: 7px;
-        height: 7px;
-        border-radius: 4px;
+        width: 6px;
+        height: 6px;
+        border-radius: 3px;
         background: rgba(255,255,255,0.1);
         transition: all 0.3s;
     }
     .dot-active {
-        width: 22px;
+        width: 18px;
         background: var(--dot-color, #4ECDC4);
     }
     .dot-done {
@@ -191,53 +191,53 @@ st.markdown("""
         opacity: 0.5;
     }
 
-    /* ── Result Cards ── */
+    /* ── Results ── */
     .result-hero {
         text-align: center;
-        padding: 32px 20px;
-        margin-bottom: 32px;
+        padding: 20px;
+        margin-bottom: 24px;
     }
     .result-emoji {
-        font-size: 60px;
+        font-size: 52px;
         animation: floater 3s ease-in-out infinite;
-        margin-bottom: 12px;
+        margin-bottom: 8px;
     }
     .grade-badge {
         display: inline-block;
-        padding: 4px 18px;
+        padding: 3px 16px;
         border-radius: 20px;
-        font-size: 13px;
+        font-size: 12px;
         font-weight: 600;
         letter-spacing: 1.5px;
-        margin-bottom: 12px;
+        margin-bottom: 8px;
     }
     .result-name {
-        font-size: 30px;
+        font-size: 26px;
         font-weight: 700;
         color: #E8E8F0;
         letter-spacing: -1px;
-        margin-bottom: 4px;
+        margin-bottom: 2px;
     }
     .result-profile {
-        font-size: 22px;
+        font-size: 20px;
         font-weight: 600;
-        margin-bottom: 10px;
+        margin-bottom: 8px;
     }
     .result-summary {
         color: rgba(255,255,255,0.5);
-        font-size: 14px;
-        max-width: 520px;
+        font-size: 13px;
+        max-width: 500px;
         margin: 0 auto;
-        line-height: 1.6;
+        line-height: 1.5;
     }
 
     /* ── Metric Card ── */
     .metric-card {
-        padding: 16px 20px;
-        border-radius: 14px;
+        padding: 14px 18px;
+        border-radius: 12px;
         background: rgba(255,255,255,0.03);
         border: 1px solid rgba(255,255,255,0.06);
-        margin-bottom: 10px;
+        margin-bottom: 8px;
     }
     .metric-label {
         font-size: 13px;
@@ -245,20 +245,20 @@ st.markdown("""
         color: #E8E8F0;
     }
     .metric-value {
-        font-size: 14px;
+        font-size: 13px;
         font-family: 'Space Mono', monospace;
         font-weight: 700;
     }
     .metric-bar {
-        height: 10px;
-        border-radius: 5px;
+        height: 8px;
+        border-radius: 4px;
         background: rgba(255,255,255,0.06);
-        margin-top: 8px;
+        margin-top: 6px;
         overflow: hidden;
     }
     .metric-fill {
         height: 100%;
-        border-radius: 5px;
+        border-radius: 4px;
         transition: width 1s ease;
     }
 
@@ -266,74 +266,94 @@ st.markdown("""
     .tag-cloud {
         display: flex;
         flex-wrap: wrap;
-        gap: 8px;
-        margin-top: 12px;
+        gap: 6px;
+        margin-top: 8px;
     }
     .tag {
-        padding: 5px 14px;
+        padding: 4px 12px;
         border-radius: 20px;
-        font-size: 12px;
+        font-size: 11px;
         font-weight: 500;
     }
 
-    /* ── Strengths / Improvements ── */
+    /* ── Insights ── */
     .insight-card {
-        padding: 20px;
-        border-radius: 14px;
-        margin-bottom: 12px;
-    }
-    .insight-title {
-        font-size: 14px;
-        font-weight: 600;
+        padding: 16px;
+        border-radius: 12px;
         margin-bottom: 10px;
     }
-    .insight-item {
+    .insight-title {
         font-size: 13px;
+        font-weight: 600;
+        margin-bottom: 8px;
+    }
+    .insight-item {
+        font-size: 12px;
         color: rgba(255,255,255,0.6);
-        line-height: 1.6;
-        margin-bottom: 4px;
+        line-height: 1.5;
+        margin-bottom: 3px;
     }
 
-    /* ── Admin table ── */
+    /* ── Admin ── */
     .admin-row {
         display: grid;
         grid-template-columns: 2fr 2fr 1fr 1fr 1.5fr;
-        padding: 12px 16px;
+        padding: 10px 14px;
         border-radius: 10px;
         background: rgba(255,255,255,0.03);
         border: 1px solid rgba(255,255,255,0.06);
-        margin-bottom: 8px;
-        font-size: 13px;
+        margin-bottom: 6px;
+        font-size: 12px;
         align-items: center;
     }
     .admin-header {
         display: grid;
         grid-template-columns: 2fr 2fr 1fr 1fr 1.5fr;
-        padding: 8px 16px;
-        font-size: 11px;
+        padding: 6px 14px;
+        font-size: 10px;
         font-weight: 600;
         color: rgba(255,255,255,0.35);
         text-transform: uppercase;
         letter-spacing: 1px;
         border-bottom: 1px solid rgba(255,255,255,0.06);
-        margin-bottom: 8px;
+        margin-bottom: 6px;
+    }
+    .stats-container {
+        display: flex;
+        justify-content: space-around;
+        padding: 16px;
+        border-radius: 12px;
+        background: rgba(78,205,196,0.06);
+        border: 1px solid rgba(78,205,196,0.12);
+        margin-top: 16px;
+    }
+    .stat-item { text-align: center; }
+    .stat-value {
+        font-size: 24px;
+        font-weight: 700;
+        font-family: 'Space Mono', monospace;
+    }
+    .stat-label {
+        font-size: 10px;
+        color: rgba(255,255,255,0.4);
+        margin-top: 2px;
     }
 
-    /* ── Streamlit overrides ── */
+    /* ── Streamlit input overrides ── */
     .stButton > button {
         font-family: 'DM Sans', sans-serif !important;
         font-weight: 600;
-        border-radius: 14px;
-        padding: 12px 28px;
+        border-radius: 12px;
         transition: all 0.2s;
     }
     .stTextInput > div > div > input {
         font-family: 'DM Sans', sans-serif !important;
         background: rgba(255,255,255,0.06) !important;
         border: 1px solid rgba(255,255,255,0.12) !important;
-        border-radius: 12px !important;
+        border-radius: 10px !important;
         color: #fff !important;
-        padding: 14px 18px !important;
+        padding: 12px 16px !important;
+        font-size: 14px !important;
     }
     .stTextInput > div > div > input:focus {
         border-color: rgba(78,205,196,0.5) !important;
@@ -341,50 +361,18 @@ st.markdown("""
     }
     .stTextInput label {
         color: rgba(255,255,255,0.5) !important;
-        font-size: 13px !important;
+        font-size: 12px !important;
     }
-    
-    div[data-testid="stHorizontalBlock"] {
-        gap: 8px;
-    }
-
-    /* ── Plotly chart bg ── */
-    .js-plotly-plot .plotly .bg {
-        fill: transparent !important;
-    }
+    .js-plotly-plot .plotly .bg { fill: transparent !important; }
 
     /* ── Email section ── */
     .email-section {
-        padding: 24px;
-        border-radius: 16px;
+        padding: 20px;
+        border-radius: 14px;
         background: linear-gradient(135deg, rgba(78,205,196,0.08), rgba(199,125,255,0.08));
         border: 1px solid rgba(78,205,196,0.2);
         text-align: center;
-        margin-top: 32px;
-    }
-
-    /* ── Stats card ── */
-    .stats-container {
-        display: flex;
-        justify-content: space-around;
-        padding: 20px;
-        border-radius: 14px;
-        background: rgba(78,205,196,0.06);
-        border: 1px solid rgba(78,205,196,0.12);
-        margin-top: 20px;
-    }
-    .stat-item {
-        text-align: center;
-    }
-    .stat-value {
-        font-size: 28px;
-        font-weight: 700;
-        font-family: 'Space Mono', monospace;
-    }
-    .stat-label {
-        font-size: 11px;
-        color: rgba(255,255,255,0.4);
-        margin-top: 2px;
+        margin-top: 24px;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -645,7 +633,7 @@ PROFILES = [
     {
         "min": 55, "max": 69, "name": "Aprendiz Financiero", "emoji": "📘", "grade": "B",
         "color": "#F59E0B",
-        "summary": "Tienes fundamentos pero hay oportunidades significativas de mejora. La buena noticia: estás en el camino correcto.",
+        "summary": "Tienes fundamentos pero hay oportunidades significativas de mejora. Estás en el camino correcto.",
         "strengths": ["Consciencia de la importancia del ahorro", "Disposición para mejorar", "Algunos hábitos positivos"],
         "improvements": ["Crea un presupuesto mensual detallado", "Construye un fondo de emergencia de 3 meses", "Comienza a invertir con montos pequeños", "Edúcate activamente en finanzas personales"],
         "book": "📖 'El hombre más rico de Babilonia' de George S. Clason",
@@ -653,7 +641,7 @@ PROFILES = [
     {
         "min": 35, "max": 54, "name": "En Zona de Riesgo", "emoji": "⚠️", "grade": "C",
         "color": "#EF4444",
-        "summary": "Tus hábitos financieros necesitan atención urgente. Pero reconocerlo es el primer paso para transformar tu realidad.",
+        "summary": "Tus hábitos financieros necesitan atención urgente. Reconocerlo es el primer paso para transformar tu realidad.",
         "strengths": ["Has dado el primer paso al evaluar tu situación", "Tienes potencial de mejora significativo"],
         "improvements": ["URGENTE: Inventario completo de deudas", "Elimina gastos innecesarios", "Empieza a ahorrar el 5% de tus ingresos", "Busca educación financiera básica"],
         "book": "📖 'Las trampas del dinero' de Dan Ariely",
@@ -717,7 +705,7 @@ def build_email_body(name, total_pct, profile, section_results, tags):
 
     body = f"""¡Hola {name}! 👋
 
-Gracias por completar el diagnóstico FinPulse de Finanzas Personales. Aquí tienes tus resultados detallados:
+Gracias por completar el diagnóstico FinPulse de Finanzas Personales. Aquí tienes tus resultados:
 
 {'═' * 50}
 {profile['emoji']}  TU PERFIL: {profile['name'].upper()} ({profile['grade']})
@@ -732,7 +720,7 @@ Gracias por completar el diagnóstico FinPulse de Finanzas Personales. Aquí tie
 💪 TUS FORTALEZAS:
 {strengths_text}
 
-📋 PLAN DE ACCIÓN - ÁREAS DE MEJORA:
+📋 PLAN DE ACCIÓN:
 {improvements_text}
 
 🏷️ TU ADN FINANCIERO:
@@ -743,14 +731,14 @@ Gracias por completar el diagnóstico FinPulse de Finanzas Personales. Aquí tie
 
 {'─' * 50}
 
-💡 TIPS RÁPIDOS PARA EMPEZAR HOY:
+💡 TIPS PARA EMPEZAR HOY:
 
-1. Descarga una app de finanzas personales (Fintonic, Wallet, o un Excel simple)
-2. Registra TODOS tus gastos durante los próximos 30 días
-3. Establece una meta de ahorro específica para este mes
-4. Dedica 15 minutos diarios a educación financiera
+1. Descarga una app de finanzas personales
+2. Registra TODOS tus gastos durante 30 días
+3. Establece una meta de ahorro para este mes
+4. Dedica 15 min diarios a educación financiera
 
-Recuerda: La salud financiera no se construye de la noche a la mañana, pero cada pequeña decisión cuenta. ¡Tú tienes el poder de transformar tu realidad financiera! 💪🚀
+¡Tú tienes el poder de transformar tu realidad financiera! 💪🚀
 
 Con aprecio,
 Programa de Finanzas Personales
@@ -759,7 +747,6 @@ Maestría en Marketing
     return body
 
 def send_email_smtp(to_email, subject, body, smtp_server, smtp_port, sender_email, sender_password):
-    """Send email via SMTP."""
     msg = MIMEMultipart()
     msg["From"] = sender_email
     msg["To"] = to_email
@@ -777,32 +764,21 @@ def send_email_smtp(to_email, subject, body, smtp_server, smtp_port, sender_emai
 # ──────────────────────────────────────────────
 # SESSION STATE INIT
 # ──────────────────────────────────────────────
-if "stage" not in st.session_state:
-    st.session_state.stage = "welcome"
-if "answers" not in st.session_state:
-    st.session_state.answers = {}
-if "current_section" not in st.session_state:
-    st.session_state.current_section = 0
-if "current_q" not in st.session_state:
-    st.session_state.current_q = 0
-if "student_name" not in st.session_state:
-    st.session_state.student_name = ""
-if "student_email" not in st.session_state:
-    st.session_state.student_email = ""
-if "all_students" not in st.session_state:
-    st.session_state.all_students = []
-if "email_sent" not in st.session_state:
-    st.session_state.email_sent = False
+for key, default in [("stage", "welcome"), ("answers", {}), ("current_section", 0),
+                      ("current_q", 0), ("student_name", ""), ("student_email", ""),
+                      ("all_students", []), ("email_sent", False)]:
+    if key not in st.session_state:
+        st.session_state[key] = default
 
 # ──────────────────────────────────────────────
-# HEADER
+# COMPACT HEADER
 # ──────────────────────────────────────────────
-col_logo, col_nav = st.columns([3, 1])
-with col_logo:
+hcol1, hcol2, hcol3 = st.columns([2, 6, 2])
+with hcol1:
     st.markdown('<div class="finpulse-logo">💰 FinPulse</div>', unsafe_allow_html=True)
-with col_nav:
+with hcol3:
     if st.session_state.stage != "admin":
-        if st.button("📊 Panel Admin", use_container_width=True):
+        if st.button("📊 Admin", use_container_width=True):
             st.session_state.stage = "admin"
             st.rerun()
     else:
@@ -810,17 +786,16 @@ with col_nav:
             st.session_state.stage = "welcome" if not st.session_state.answers else "results"
             st.rerun()
 
-st.markdown("---")
+st.divider()
 
 # ══════════════════════════════════════════════
-# WELCOME SCREEN
+# WELCOME SCREEN — compact two-column layout
 # ══════════════════════════════════════════════
 if st.session_state.stage == "welcome":
-    st.markdown("&nbsp;", unsafe_allow_html=True)
+    left_col, spacer, right_col = st.columns([5, 1, 4])
 
-    col1, col2, col3 = st.columns([1, 2, 1])
-    with col2:
-        st.markdown('<div class="emoji-float">💰</div>', unsafe_allow_html=True)
+    with left_col:
+        st.markdown('<div class="welcome-emoji">💰</div>', unsafe_allow_html=True)
         st.markdown(
             '<div class="welcome-title">¿Qué tan saludable es<br>'
             '<span class="welcome-gradient">tu vida financiera?</span></div>',
@@ -829,17 +804,32 @@ if st.session_state.stage == "welcome":
         st.markdown(
             '<div class="welcome-sub">'
             "Descubre tu perfil financiero en 5 minutos. Responde con honestidad "
-            "— no hay respuestas correctas, solo tu realidad."
+            "— no hay respuestas correctas, solo tu realidad.</div>",
+            unsafe_allow_html=True,
+        )
+        # Section icons
+        sections_html = '<div class="welcome-sections">'
+        for s in SECTIONS:
+            sections_html += (
+                f'<div class="welcome-section-item">'
+                f'<div class="ws-icon">{s["icon"]}</div>'
+                f'<div class="ws-label">{s["title"]}</div></div>'
+            )
+        sections_html += "</div>"
+        st.markdown(sections_html, unsafe_allow_html=True)
+
+    with right_col:
+        st.markdown(
+            '<div class="form-card">'
+            '<div class="form-title">🚀 Comienza tu diagnóstico</div>'
+            '<div class="form-sub">Completa tus datos para iniciar</div>'
             "</div>",
             unsafe_allow_html=True,
         )
+        name = st.text_input("Nombre completo", value=st.session_state.student_name, placeholder="Ej: María López García", label_visibility="collapsed")
+        email = st.text_input("Correo electrónico", value=st.session_state.student_email, placeholder="Ej: maria@universidad.edu.co", label_visibility="collapsed")
 
-        name = st.text_input("👤 Tu nombre completo", value=st.session_state.student_name, placeholder="Ej: María López García")
-        email = st.text_input("📧 Tu correo electrónico", value=st.session_state.student_email, placeholder="Ej: maria@universidad.edu.co")
-
-        st.markdown("&nbsp;", unsafe_allow_html=True)
-
-        if st.button("🚀  Comenzar Diagnóstico", use_container_width=True, type="primary", disabled=not (name.strip() and email.strip())):
+        if st.button("🚀  Comenzar Diagnóstico →", use_container_width=True, type="primary", disabled=not (name.strip() and email.strip())):
             st.session_state.student_name = name.strip()
             st.session_state.student_email = email.strip()
             st.session_state.stage = "survey"
@@ -849,18 +839,11 @@ if st.session_state.stage == "welcome":
             st.session_state.email_sent = False
             st.rerun()
 
-        # Section icons preview
-        st.markdown("&nbsp;", unsafe_allow_html=True)
-        icon_cols = st.columns(5)
-        for i, s in enumerate(SECTIONS):
-            with icon_cols[i]:
-                st.markdown(
-                    f'<div style="text-align:center;opacity:0.45;">'
-                    f'<div style="font-size:28px;">{s["icon"]}</div>'
-                    f'<div style="font-size:10px;color:rgba(255,255,255,0.35);margin-top:4px;">{s["title"]}</div>'
-                    f"</div>",
-                    unsafe_allow_html=True,
-                )
+        st.markdown(
+            '<p style="font-size:11px;color:rgba(255,255,255,0.25);text-align:center;margin-top:8px;">'
+            "19 preguntas · 5 secciones · ~5 minutos</p>",
+            unsafe_allow_html=True,
+        )
 
 # ══════════════════════════════════════════════
 # SURVEY SCREEN
@@ -875,21 +858,21 @@ elif st.session_state.stage == "survey":
     progress_pct = len(st.session_state.answers) / total_q
     st.progress(progress_pct)
     st.markdown(
-        f'<div style="display:flex;justify-content:space-between;margin-top:-8px;margin-bottom:20px;">'
-        f'<span style="font-size:12px;color:rgba(255,255,255,0.35);">Pregunta {q_num} de {total_q}</span>'
-        f'<span style="font-size:12px;color:{section["color"]};font-family:\'Space Mono\',monospace;font-weight:700;">'
+        f'<div style="display:flex;justify-content:space-between;margin-top:-10px;margin-bottom:12px;">'
+        f'<span style="font-size:11px;color:rgba(255,255,255,0.35);">Pregunta {q_num} de {total_q}</span>'
+        f'<span style="font-size:11px;color:{section["color"]};font-family:\'Space Mono\',monospace;font-weight:700;">'
         f'{int(progress_pct * 100)}%</span></div>',
         unsafe_allow_html=True,
     )
 
-    col1, col2, col3 = st.columns([0.5, 3, 0.5])
+    col1, col2, col3 = st.columns([1, 4, 1])
     with col2:
         # Section badge
         st.markdown(
             f'<div class="section-badge" style="background:{section["color"]}12;border:1px solid {section["color"]}30;">'
             f'<span class="section-icon">{section["icon"]}</span>'
             f'<div><div class="section-label" style="color:{section["color"]};">{section["title"]}</div>'
-            f'<div style="font-size:11px;color:rgba(255,255,255,0.3);margin-top:2px;">'
+            f'<div style="font-size:10px;color:rgba(255,255,255,0.3);margin-top:1px;">'
             f'Sección {st.session_state.current_section + 1} de {len(SECTIONS)}</div></div></div>',
             unsafe_allow_html=True,
         )
@@ -906,8 +889,6 @@ elif st.session_state.stage == "survey":
                 use_container_width=True,
             ):
                 st.session_state.answers[question["id"]] = {"score": opt["score"], "tag": opt["tag"], "text": opt["text"]}
-
-                # Advance
                 sec = st.session_state.current_section
                 q = st.session_state.current_q
                 if q < len(SECTIONS[sec]["questions"]) - 1:
@@ -923,8 +904,9 @@ elif st.session_state.stage == "survey":
         dots_html = '<div class="progress-dots">'
         for si, s in enumerate(SECTIONS):
             for qi, q in enumerate(s["questions"]):
+                qId = q["id"]
                 is_active = si == st.session_state.current_section and qi == st.session_state.current_q
-                is_done = q["id"] in st.session_state.answers
+                is_done = qId in st.session_state.answers
                 cls = "dot-active" if is_active else ("dot-done" if is_done else "")
                 dots_html += f'<div class="dot {cls}" style="--dot-color:{s["color"]};"></div>'
         dots_html += "</div>"
@@ -936,7 +918,7 @@ elif st.session_state.stage == "survey":
 elif st.session_state.stage == "results":
     section_results, total_score, total_max, total_pct, profile, tags = compute_results(st.session_state.answers)
 
-    # ── Hero ──
+    # Hero
     st.markdown(
         f'<div class="result-hero">'
         f'<div class="result-emoji">{profile["emoji"]}</div>'
@@ -944,21 +926,20 @@ elif st.session_state.stage == "results":
         f'GRADO {profile["grade"]}</div><br>'
         f'<div class="result-name">{st.session_state.student_name}</div>'
         f'<div class="result-profile" style="color:{profile["color"]};">{profile["name"]}</div>'
-        f'<div class="result-summary">{profile["summary"]}</div>'
-        f"</div>",
+        f'<div class="result-summary">{profile["summary"]}</div></div>',
         unsafe_allow_html=True,
     )
 
-    # ── Charts row ──
+    # Charts row
     col_gauge, col_radar = st.columns(2)
 
     with col_gauge:
         fig_gauge = go.Figure(go.Indicator(
             mode="gauge+number",
             value=total_pct,
-            number={"suffix": "%", "font": {"size": 48, "color": profile["color"], "family": "Space Mono"}},
+            number={"suffix": "%", "font": {"size": 42, "color": profile["color"], "family": "Space Mono"}},
             gauge={
-                "axis": {"range": [0, 100], "tickcolor": "rgba(255,255,255,0.15)", "tickfont": {"color": "rgba(255,255,255,0.3)", "size": 10}},
+                "axis": {"range": [0, 100], "tickcolor": "rgba(255,255,255,0.15)", "tickfont": {"color": "rgba(255,255,255,0.3)", "size": 9}},
                 "bar": {"color": profile["color"], "thickness": 0.3},
                 "bgcolor": "rgba(255,255,255,0.04)",
                 "borderwidth": 0,
@@ -970,11 +951,11 @@ elif st.session_state.stage == "results":
                     {"range": [85, 100], "color": "rgba(16,185,129,0.1)"},
                 ],
             },
-            title={"text": "Score General", "font": {"size": 14, "color": "rgba(255,255,255,0.5)"}},
+            title={"text": "Score General", "font": {"size": 13, "color": "rgba(255,255,255,0.5)"}},
         ))
         fig_gauge.update_layout(
             paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-            height=280, margin=dict(t=60, b=20, l=30, r=30),
+            height=250, margin=dict(t=50, b=10, l=25, r=25),
             font={"family": "DM Sans"},
         )
         st.plotly_chart(fig_gauge, use_container_width=True)
@@ -982,8 +963,6 @@ elif st.session_state.stage == "results":
     with col_radar:
         categories = [f'{r["icon"]} {r["title"]}' for r in section_results]
         values = [r["pct"] for r in section_results]
-        colors = [r["color"] for r in section_results]
-
         fig_radar = go.Figure()
         fig_radar.add_trace(go.Scatterpolar(
             r=values + [values[0]],
@@ -991,24 +970,22 @@ elif st.session_state.stage == "results":
             fill="toself",
             fillcolor="rgba(78,205,196,0.15)",
             line=dict(color="#4ECDC4", width=2),
-            marker=dict(size=6, color="#4ECDC4"),
-            name="Tu perfil",
+            marker=dict(size=5, color="#4ECDC4"),
         ))
         fig_radar.update_layout(
             polar=dict(
                 bgcolor="rgba(0,0,0,0)",
-                radialaxis=dict(visible=True, range=[0, 100], showticklabels=True, tickfont=dict(size=9, color="rgba(255,255,255,0.3)"), gridcolor="rgba(255,255,255,0.06)"),
-                angularaxis=dict(tickfont=dict(size=11, color="rgba(255,255,255,0.6)"), gridcolor="rgba(255,255,255,0.06)"),
+                radialaxis=dict(visible=True, range=[0, 100], tickfont=dict(size=8, color="rgba(255,255,255,0.3)"), gridcolor="rgba(255,255,255,0.06)"),
+                angularaxis=dict(tickfont=dict(size=10, color="rgba(255,255,255,0.6)"), gridcolor="rgba(255,255,255,0.06)"),
             ),
             paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-            height=300, margin=dict(t=40, b=40, l=60, r=60),
-            showlegend=False,
-            font={"family": "DM Sans"},
+            height=260, margin=dict(t=30, b=30, l=50, r=50),
+            showlegend=False, font={"family": "DM Sans"},
         )
         st.plotly_chart(fig_radar, use_container_width=True)
 
-    # ── Section Bars ──
-    st.markdown("### 📊 Resultados por Sección")
+    # Section Bars
+    st.markdown("#### 📊 Resultados por Sección")
     for r in section_results:
         st.markdown(
             f'<div class="metric-card">'
@@ -1020,47 +997,44 @@ elif st.session_state.stage == "results":
             unsafe_allow_html=True,
         )
 
-    # ── Bar chart comparison ──
-    st.markdown("&nbsp;", unsafe_allow_html=True)
+    # Bar chart
     fig_bar = go.Figure()
     for r in section_results:
         fig_bar.add_trace(go.Bar(
             x=[r["title"]], y=[r["pct"]],
             marker_color=r["color"], name=r["title"],
             text=[f'{r["pct"]}%'], textposition="outside",
-            textfont=dict(color="rgba(255,255,255,0.7)", size=13, family="Space Mono"),
+            textfont=dict(color="rgba(255,255,255,0.7)", size=12, family="Space Mono"),
         ))
     fig_bar.update_layout(
         paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-        height=320, showlegend=False,
+        height=280, showlegend=False,
         yaxis=dict(range=[0, 110], gridcolor="rgba(255,255,255,0.04)", tickfont=dict(color="rgba(255,255,255,0.3)")),
-        xaxis=dict(tickfont=dict(color="rgba(255,255,255,0.5)", size=11)),
-        margin=dict(t=20, b=40, l=40, r=20),
+        xaxis=dict(tickfont=dict(color="rgba(255,255,255,0.5)", size=10)),
+        margin=dict(t=15, b=30, l=35, r=15),
         font={"family": "DM Sans"},
     )
     st.plotly_chart(fig_bar, use_container_width=True)
 
-    # ── Strengths & Improvements ──
+    # Strengths & Improvements
     col_s, col_i = st.columns(2)
     with col_s:
         st.markdown(
             '<div class="insight-card" style="background:rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.15);">'
             '<div class="insight-title" style="color:#10B981;">✅ Fortalezas</div>' +
             "".join(f'<div class="insight-item">• {s}</div>' for s in profile["strengths"]) +
-            "</div>",
-            unsafe_allow_html=True,
+            "</div>", unsafe_allow_html=True,
         )
     with col_i:
         st.markdown(
             '<div class="insight-card" style="background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.15);">'
             '<div class="insight-title" style="color:#EF4444;">🔧 Áreas de Mejora</div>' +
             "".join(f'<div class="insight-item">• {s}</div>' for s in profile["improvements"]) +
-            "</div>",
-            unsafe_allow_html=True,
+            "</div>", unsafe_allow_html=True,
         )
 
-    # ── Tags ──
-    st.markdown("### 🏷️ Tu ADN Financiero")
+    # Tags
+    st.markdown("#### 🏷️ Tu ADN Financiero")
     tags_html = '<div class="tag-cloud">'
     for i, t in enumerate(tags):
         c = SECTIONS[min(i // 4, len(SECTIONS) - 1)]["color"]
@@ -1068,22 +1042,17 @@ elif st.session_state.stage == "results":
     tags_html += "</div>"
     st.markdown(tags_html, unsafe_allow_html=True)
 
-    # ── Book ──
-    st.markdown("&nbsp;", unsafe_allow_html=True)
-    st.info(f"📚 **Lectura recomendada para tu nivel:** {profile['book']}")
+    # Book
+    st.info(f"📚 **Lectura recomendada:** {profile['book']}")
 
-    # ── Email Section ──
-    st.markdown("---")
-    st.markdown("### 📧 Enviar Resultados por Correo")
-    st.markdown(
-        f"Se generará un correo personalizado con tus resultados y recomendaciones para "
-        f"**{st.session_state.student_email}**"
-    )
+    # Email
+    st.divider()
+    st.markdown("#### 📧 Enviar Resultados por Correo")
+    st.markdown(f"Correo personalizado con resultados y recomendaciones para **{st.session_state.student_email}**")
 
     email_method = st.radio(
-        "Método de envío:",
-        ["📋 Generar correo (copiar y pegar)", "📬 Enviar por SMTP (requiere configuración)"],
-        horizontal=True,
+        "Método:", ["📋 Generar correo (copiar)", "📬 Enviar por SMTP"],
+        horizontal=True, label_visibility="collapsed",
     )
 
     if "📋" in email_method:
@@ -1091,67 +1060,46 @@ elif st.session_state.stage == "results":
             body = build_email_body(st.session_state.student_name, total_pct, profile, section_results, tags)
             st.session_state.generated_email = body
             st.session_state.email_sent = True
-            # Save student record
             st.session_state.all_students.append({
-                "name": st.session_state.student_name,
-                "email": st.session_state.student_email,
-                "score": total_pct,
-                "profile": profile["name"],
-                "grade": profile["grade"],
+                "name": st.session_state.student_name, "email": st.session_state.student_email,
+                "score": total_pct, "profile": profile["name"], "grade": profile["grade"],
                 "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M"),
             })
-
         if st.session_state.email_sent and "generated_email" in st.session_state:
-            st.success("✅ ¡Correo generado exitosamente!")
-            st.markdown(f"**Asunto:** {profile['emoji']} Tus Resultados: {profile['name']} ({total_pct}%) - Diagnóstico FinPulse")
-            st.text_area("Cuerpo del correo:", st.session_state.generated_email, height=400)
-
+            st.success("✅ ¡Correo generado!")
+            st.markdown(f"**Asunto:** {profile['emoji']} Tus Resultados: {profile['name']} ({total_pct}%) - FinPulse")
+            st.text_area("Cuerpo:", st.session_state.generated_email, height=350)
     else:
         with st.expander("⚙️ Configuración SMTP", expanded=True):
-            st.caption("Configura estas credenciales en `secrets.toml` para producción")
-            smtp_col1, smtp_col2 = st.columns(2)
-            with smtp_col1:
+            c1, c2 = st.columns(2)
+            with c1:
                 smtp_server = st.text_input("Servidor SMTP", value="smtp.gmail.com")
                 smtp_port = st.number_input("Puerto", value=587)
-            with smtp_col2:
-                sender_email = st.text_input("Email remitente", placeholder="finpulse@universidad.edu.co")
-                sender_password = st.text_input("Contraseña / App Password", type="password")
-
-        if st.button("📬 Enviar Correo Ahora", type="primary", use_container_width=True):
+            with c2:
+                sender_email = st.text_input("Email remitente")
+                sender_password = st.text_input("App Password", type="password")
+        if st.button("📬 Enviar Correo", type="primary", use_container_width=True):
             if sender_email and sender_password:
                 body = build_email_body(st.session_state.student_name, total_pct, profile, section_results, tags)
-                subject = f"{profile['emoji']} Tus Resultados: {profile['name']} ({total_pct}%) - Diagnóstico FinPulse"
-                with st.spinner("Enviando correo..."):
-                    success, error = send_email_smtp(
-                        st.session_state.student_email, subject, body,
-                        smtp_server, int(smtp_port), sender_email, sender_password,
-                    )
-                if success:
-                    st.success(f"✅ ¡Correo enviado exitosamente a {st.session_state.student_email}!")
+                subject = f"{profile['emoji']} Resultados: {profile['name']} ({total_pct}%) - FinPulse"
+                with st.spinner("Enviando..."):
+                    ok, err = send_email_smtp(st.session_state.student_email, subject, body, smtp_server, int(smtp_port), sender_email, sender_password)
+                if ok:
+                    st.success(f"✅ Enviado a {st.session_state.student_email}")
                     st.session_state.all_students.append({
-                        "name": st.session_state.student_name,
-                        "email": st.session_state.student_email,
-                        "score": total_pct,
-                        "profile": profile["name"],
-                        "grade": profile["grade"],
+                        "name": st.session_state.student_name, "email": st.session_state.student_email,
+                        "score": total_pct, "profile": profile["name"], "grade": profile["grade"],
                         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M"),
                     })
-                    st.session_state.email_sent = True
                 else:
-                    st.error(f"❌ Error al enviar: {error}")
+                    st.error(f"❌ Error: {err}")
             else:
-                st.warning("⚠️ Completa la configuración SMTP para enviar el correo.")
+                st.warning("⚠️ Completa la configuración SMTP")
 
-    # ── New survey button ──
-    st.markdown("---")
+    st.divider()
     if st.button("🔄 Nueva Encuesta", use_container_width=True):
-        st.session_state.stage = "welcome"
-        st.session_state.answers = {}
-        st.session_state.current_section = 0
-        st.session_state.current_q = 0
-        st.session_state.student_name = ""
-        st.session_state.student_email = ""
-        st.session_state.email_sent = False
+        for k in ["stage", "answers", "current_section", "current_q", "student_name", "student_email", "email_sent"]:
+            st.session_state[k] = {"stage": "welcome", "answers": {}, "current_section": 0, "current_q": 0, "student_name": "", "student_email": "", "email_sent": False}[k]
         if "generated_email" in st.session_state:
             del st.session_state.generated_email
         st.rerun()
@@ -1160,38 +1108,28 @@ elif st.session_state.stage == "results":
 # ADMIN PANEL
 # ══════════════════════════════════════════════
 elif st.session_state.stage == "admin":
-    st.markdown("## 📊 Panel de Administración")
-    st.markdown('<p style="color:rgba(255,255,255,0.4);font-size:14px;">Registro de estudiantes que han completado la encuesta</p>', unsafe_allow_html=True)
+    st.markdown("#### 📊 Panel de Administración")
+    st.caption("Registro de estudiantes que han completado la encuesta")
 
     students = st.session_state.all_students
 
     if not students:
         st.markdown(
-            '<div style="text-align:center;padding:60px 20px;color:rgba(255,255,255,0.3);">'
-            '<div style="font-size:48px;margin-bottom:16px;">📭</div>'
-            "<p>Aún no hay estudiantes registrados en esta sesión.</p>"
-            '<p style="font-size:12px;margin-top:8px;">Los registros se acumularán a medida que los estudiantes completen la encuesta.</p>'
-            "</div>",
+            '<div style="text-align:center;padding:48px 20px;color:rgba(255,255,255,0.3);">'
+            '<div style="font-size:40px;margin-bottom:12px;">📭</div>'
+            "<p>Aún no hay estudiantes registrados en esta sesión.</p></div>",
             unsafe_allow_html=True,
         )
     else:
-        # Stats
         scores = [s["score"] for s in students]
-        avg_score = round(sum(scores) / len(scores))
-        max_score = max(scores)
-        min_score = min(scores)
-
         st.markdown(
             f'<div class="stats-container">'
             f'<div class="stat-item"><div class="stat-value" style="color:#4ECDC4;">{len(students)}</div><div class="stat-label">Total</div></div>'
-            f'<div class="stat-item"><div class="stat-value" style="color:#FFD93D;">{avg_score}%</div><div class="stat-label">Promedio</div></div>'
-            f'<div class="stat-item"><div class="stat-value" style="color:#10B981;">{max_score}%</div><div class="stat-label">Mejor</div></div>'
-            f'<div class="stat-item"><div class="stat-value" style="color:#EF4444;">{min_score}%</div><div class="stat-label">Menor</div></div>'
-            f"</div>",
-            unsafe_allow_html=True,
+            f'<div class="stat-item"><div class="stat-value" style="color:#FFD93D;">{round(sum(scores)/len(scores))}%</div><div class="stat-label">Promedio</div></div>'
+            f'<div class="stat-item"><div class="stat-value" style="color:#10B981;">{max(scores)}%</div><div class="stat-label">Mejor</div></div>'
+            f'<div class="stat-item"><div class="stat-value" style="color:#EF4444;">{min(scores)}%</div><div class="stat-label">Menor</div></div>'
+            f"</div>", unsafe_allow_html=True,
         )
-
-        st.markdown("&nbsp;", unsafe_allow_html=True)
 
         # Distribution chart
         fig_dist = go.Figure()
@@ -1200,27 +1138,21 @@ elif st.session_state.stage == "admin":
         for s in students:
             grade_counts[s["grade"]] = grade_counts.get(s["grade"], 0) + 1
         for grade, count in grade_counts.items():
-            fig_dist.add_trace(go.Bar(
-                x=[grade], y=[count], marker_color=grade_colors.get(grade, "#fff"),
-                name=grade, text=[count], textposition="outside",
-                textfont=dict(color="rgba(255,255,255,0.7)", size=14, family="Space Mono"),
-            ))
+            fig_dist.add_trace(go.Bar(x=[grade], y=[count], marker_color=grade_colors.get(grade, "#fff"), text=[count], textposition="outside",
+                textfont=dict(color="rgba(255,255,255,0.7)", size=13, family="Space Mono")))
         fig_dist.update_layout(
-            title=dict(text="Distribución por Grado", font=dict(size=14, color="rgba(255,255,255,0.6)")),
+            title=dict(text="Distribución por Grado", font=dict(size=13, color="rgba(255,255,255,0.5)")),
             paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-            height=260, showlegend=False,
+            height=220, showlegend=False,
             yaxis=dict(gridcolor="rgba(255,255,255,0.04)", tickfont=dict(color="rgba(255,255,255,0.3)")),
-            xaxis=dict(tickfont=dict(color="rgba(255,255,255,0.5)", size=14)),
-            margin=dict(t=50, b=30, l=40, r=20),
-            font={"family": "DM Sans"},
+            xaxis=dict(tickfont=dict(color="rgba(255,255,255,0.5)", size=13)),
+            margin=dict(t=40, b=20, l=35, r=15), font={"family": "DM Sans"},
         )
         st.plotly_chart(fig_dist, use_container_width=True)
 
         # Table
         st.markdown(
-            '<div class="admin-header">'
-            "<span>Nombre</span><span>Correo</span><span>Score</span><span>Grado</span><span>Fecha</span>"
-            "</div>",
+            '<div class="admin-header"><span>Nombre</span><span>Correo</span><span>Score</span><span>Grado</span><span>Fecha</span></div>',
             unsafe_allow_html=True,
         )
         for s in students:
@@ -1228,17 +1160,13 @@ elif st.session_state.stage == "admin":
             st.markdown(
                 f'<div class="admin-row">'
                 f'<span style="font-weight:600;">{s["name"]}</span>'
-                f'<span style="color:rgba(255,255,255,0.5);font-size:12px;">{s["email"]}</span>'
+                f'<span style="color:rgba(255,255,255,0.5);font-size:11px;">{s["email"]}</span>'
                 f'<span style="color:{p["color"]};font-family:\'Space Mono\',monospace;font-weight:700;">{s["score"]}%</span>'
-                f'<span><span style="padding:2px 10px;border-radius:6px;background:{p["color"]}20;color:{p["color"]};'
-                f'font-size:12px;font-weight:600;">{s["grade"]}</span></span>'
-                f'<span style="color:rgba(255,255,255,0.3);font-size:11px;">{s["timestamp"]}</span>'
-                f"</div>",
+                f'<span style="padding:2px 8px;border-radius:6px;background:{p["color"]}20;color:{p["color"]};font-size:11px;font-weight:600;">{s["grade"]}</span>'
+                f'<span style="color:rgba(255,255,255,0.3);font-size:10px;">{s["timestamp"]}</span></div>',
                 unsafe_allow_html=True,
             )
 
-        # Download CSV
-        st.markdown("&nbsp;", unsafe_allow_html=True)
         df = pd.DataFrame(students)
         csv = df.to_csv(index=False).encode("utf-8")
-        st.download_button("📥 Descargar Resultados (CSV)", csv, "finpulse_resultados.csv", "text/csv", use_container_width=True)
+        st.download_button("📥 Descargar CSV", csv, "finpulse_resultados.csv", "text/csv", use_container_width=True)

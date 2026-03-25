@@ -1061,56 +1061,85 @@ elif st.session_state.stage == "results":
     # Book
     st.info(f"📚 **Lectura recomendada:** {profile['book']}")
 
-    # Email
+    # Email — auto-send from secrets or fallback to manual
     st.divider()
     st.markdown("#### 📧 Enviar Resultados por Correo")
     st.markdown(f"Correo personalizado con resultados y recomendaciones para **{st.session_state.student_email}**")
 
-    email_method = st.radio(
-        "Método:", ["📋 Generar correo (copiar)", "📬 Enviar por SMTP"],
-        horizontal=True, label_visibility="collapsed",
-    )
+    # Check if SMTP secrets are configured
+    has_secrets = False
+    try:
+        smtp_server = st.secrets["smtp"]["server"]
+        smtp_port = int(st.secrets["smtp"]["port"])
+        sender_email = st.secrets["smtp"]["sender_email"]
+        sender_password = st.secrets["smtp"]["sender_password"]
+        has_secrets = True
+    except Exception:
+        has_secrets = False
 
-    if "📋" in email_method:
-        if st.button("📋 Generar Correo Personalizado", type="primary", use_container_width=True):
-            body = build_email_body(st.session_state.student_name, total_pct, profile, section_results, tags)
-            st.session_state.generated_email = body
-            st.session_state.email_sent = True
-            st.session_state.all_students.append({
-                "name": st.session_state.student_name, "email": st.session_state.student_email,
-                "score": total_pct, "profile": profile["name"], "grade": profile["grade"],
-                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M"),
-            })
-        if st.session_state.email_sent and "generated_email" in st.session_state:
-            st.success("✅ ¡Correo generado!")
-            st.markdown(f"**Asunto:** {profile['emoji']} Tus Resultados: {profile['name']} ({total_pct}%) - FinPulse")
-            st.text_area("Cuerpo:", st.session_state.generated_email, height=350)
-    else:
-        with st.expander("⚙️ Configuración SMTP", expanded=True):
-            c1, c2 = st.columns(2)
-            with c1:
-                smtp_server = st.text_input("Servidor SMTP", value="smtp.gmail.com")
-                smtp_port = st.number_input("Puerto", value=587)
-            with c2:
-                sender_email = st.text_input("Email remitente")
-                sender_password = st.text_input("App Password", type="password")
-        if st.button("📬 Enviar Correo", type="primary", use_container_width=True):
-            if sender_email and sender_password:
+    if has_secrets:
+        # ── AUTO MODE: secrets configured, one-click send ──
+        if not st.session_state.email_sent:
+            if st.button("📬  Enviar Correo Automáticamente", type="primary", use_container_width=True):
                 body = build_email_body(st.session_state.student_name, total_pct, profile, section_results, tags)
-                subject = f"{profile['emoji']} Resultados: {profile['name']} ({total_pct}%) - FinPulse"
-                with st.spinner("Enviando..."):
-                    ok, err = send_email_smtp(st.session_state.student_email, subject, body, smtp_server, int(smtp_port), sender_email, sender_password)
+                subject = f"{profile['emoji']} Tus Resultados: {profile['name']} ({total_pct}%) - Diagnóstico FinPulse"
+                with st.spinner("📨 Enviando correo personalizado..."):
+                    ok, err = send_email_smtp(st.session_state.student_email, subject, body, smtp_server, smtp_port, sender_email, sender_password)
                 if ok:
-                    st.success(f"✅ Enviado a {st.session_state.student_email}")
+                    st.session_state.email_sent = True
                     st.session_state.all_students.append({
                         "name": st.session_state.student_name, "email": st.session_state.student_email,
                         "score": total_pct, "profile": profile["name"], "grade": profile["grade"],
                         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M"),
                     })
+                    st.rerun()
                 else:
-                    st.error(f"❌ Error: {err}")
-            else:
-                st.warning("⚠️ Completa la configuración SMTP")
+                    st.error(f"❌ Error al enviar: {err}")
+        else:
+            st.success(f"✅ ¡Correo enviado exitosamente a {st.session_state.student_email}!")
+            with st.expander("👀 Ver contenido del correo enviado"):
+                body = build_email_body(st.session_state.student_name, total_pct, profile, section_results, tags)
+                st.text_area("", body, height=300, label_visibility="collapsed")
+    else:
+        # ── MANUAL MODE: no secrets, show config ──
+        st.warning("⚠️ No se detectaron credenciales SMTP en Secrets. Configúralas en Streamlit Cloud → Settings → Secrets, o ingresa las credenciales manualmente abajo.")
+        
+        manual_tab, copy_tab = st.tabs(["📬 Enviar por SMTP", "📋 Copiar correo"])
+
+        with manual_tab:
+            c1, c2 = st.columns(2)
+            with c1:
+                m_server = st.text_input("Servidor SMTP", value="smtp.gmail.com")
+                m_port = st.number_input("Puerto", value=587)
+            with c2:
+                m_email = st.text_input("Email remitente")
+                m_pass = st.text_input("App Password", type="password")
+            if st.button("📬 Enviar Correo", type="primary", use_container_width=True):
+                if m_email and m_pass:
+                    body = build_email_body(st.session_state.student_name, total_pct, profile, section_results, tags)
+                    subject = f"{profile['emoji']} Resultados: {profile['name']} ({total_pct}%) - FinPulse"
+                    with st.spinner("Enviando..."):
+                        ok, err = send_email_smtp(st.session_state.student_email, subject, body, m_server, int(m_port), m_email, m_pass)
+                    if ok:
+                        st.success(f"✅ Enviado a {st.session_state.student_email}")
+                        st.session_state.email_sent = True
+                        st.session_state.all_students.append({
+                            "name": st.session_state.student_name, "email": st.session_state.student_email,
+                            "score": total_pct, "profile": profile["name"], "grade": profile["grade"],
+                            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M"),
+                        })
+                    else:
+                        st.error(f"❌ Error: {err}")
+                else:
+                    st.warning("⚠️ Completa email y contraseña")
+
+        with copy_tab:
+            if st.button("📋 Generar Correo para Copiar", use_container_width=True):
+                body = build_email_body(st.session_state.student_name, total_pct, profile, section_results, tags)
+                st.session_state.generated_email = body
+            if "generated_email" in st.session_state:
+                st.markdown(f"**Asunto:** {profile['emoji']} Tus Resultados: {profile['name']} ({total_pct}%) - FinPulse")
+                st.text_area("Copia este contenido en tu correo:", st.session_state.generated_email, height=350)
 
     st.divider()
     if st.button("🔄 Nueva Encuesta", use_container_width=True):

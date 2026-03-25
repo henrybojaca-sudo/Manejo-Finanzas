@@ -345,6 +345,32 @@ st.markdown("""
         font-weight: 600;
         border-radius: 12px;
         transition: all 0.2s;
+        position: relative;
+        overflow: hidden;
+    }
+    .stButton > button::after {
+        content: attr(data-tooltip);
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(78, 205, 196, 0.18);
+        color: #ffffff;
+        font-size: 14px;
+        font-weight: 600;
+        font-family: 'DM Sans', sans-serif;
+        opacity: 0;
+        transition: opacity 0.2s;
+        border-radius: 12px;
+        padding: 0 20px;
+        text-align: center;
+        pointer-events: none;
+        white-space: normal;
+        word-break: break-word;
+    }
+    .stButton > button:hover::after {
+        opacity: 1;
     }
     .stTextInput > div > div > input,
     .stTextInput input,
@@ -391,6 +417,19 @@ st.markdown("""
         margin-top: 24px;
     }
 </style>
+<script>
+(function() {
+    function applyTooltips() {
+        document.querySelectorAll('.stButton > button').forEach(function(btn) {
+            var text = btn.innerText.trim();
+            if (text) btn.setAttribute('data-tooltip', text);
+        });
+    }
+    var observer = new MutationObserver(applyTooltips);
+    observer.observe(document.body, { childList: true, subtree: true });
+    applyTooltips();
+})();
+</script>
 """, unsafe_allow_html=True)
 
 # ──────────────────────────────────────────────
@@ -1046,7 +1085,6 @@ elif st.session_state.stage == "survey":
                 f"  {letters[i]}   ·   {opt['text']}",
                 key=f"opt_{question['id']}_{i}",
                 use_container_width=True,
-                help=opt['text'],
             ):
                 st.session_state.answers[question["id"]] = {"score": opt["score"], "tag": opt["tag"], "text": opt["text"]}
                 sec = st.session_state.current_section

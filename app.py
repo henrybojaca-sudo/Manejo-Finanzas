@@ -350,7 +350,12 @@ st.markdown("""
     .stButton > button:hover p,
     .stButton > button:hover span,
     .stButton > button:focus,
-    .stButton > button:active {
+    .stButton > button:active,
+    .stButton > button[kind="primary"]:hover,
+    .stButton > button[kind="primary"]:hover p,
+    .stButton > button[kind="primary"]:hover span,
+    .stButton > button[kind="primary"]:focus,
+    .stButton > button[kind="primary"]:active {
         color: #ffffff !important;
         -webkit-text-fill-color: #ffffff !important;
     }

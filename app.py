@@ -376,10 +376,16 @@ st.markdown("""
     }
     .stTextInput > div > div > input:focus,
     .stTextInput input:focus,
-    [data-testid="stTextInput"] input:focus {
+    [data-testid="stTextInput"] input:focus,
+    .stTextInput > div > div > input:active,
+    .stTextInput input:active,
+    input[type="email"]:focus,
+    input[type="email"]:active {
         border-color: rgba(78,205,196,0.6) !important;
         box-shadow: 0 0 0 2px rgba(78,205,196,0.2) !important;
         background: rgba(15, 15, 35, 1) !important;
+        color: #FFFFFF !important;
+        -webkit-text-fill-color: #FFFFFF !important;
     }
     .stTextInput > div > div > input::placeholder,
     .stTextInput input::placeholder,

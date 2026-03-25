@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import plotly.graph_objects as go
 import plotly.express as px
 import pandas as pd
@@ -421,40 +422,40 @@ st.markdown("""
         margin-top: 24px;
     }
 </style>
+""", unsafe_allow_html=True)
+
+components.html("""
 <script>
 (function() {
+    var doc = window.parent.document;
     function attachOverlays() {
-        document.querySelectorAll('.stButton > button').forEach(function(btn) {
+        doc.querySelectorAll('.stButton > button').forEach(function(btn) {
             if (btn.querySelector('.btn-hover-overlay')) return;
             var text = (btn.innerText || btn.textContent || '').trim();
             if (!text) return;
-            var overlay = document.createElement('div');
+            var overlay = doc.createElement('div');
             overlay.className = 'btn-hover-overlay';
             overlay.textContent = text;
             btn.style.position = 'relative';
             btn.style.overflow = 'hidden';
             btn.appendChild(overlay);
             btn.addEventListener('mouseenter', function() {
-                overlay.classList.add('visible');
+                overlay.style.opacity = '1';
             });
             btn.addEventListener('mouseleave', function() {
-                overlay.classList.remove('visible');
+                overlay.style.opacity = '0';
             });
         });
     }
-    function init() {
+    setTimeout(function() {
         attachOverlays();
-        var observer = new MutationObserver(function() { attachOverlays(); });
-        observer.observe(document.body, { childList: true, subtree: true });
-    }
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', init);
-    } else {
-        setTimeout(init, 100);
-    }
+        new MutationObserver(function() {
+            attachOverlays();
+        }).observe(doc.body, { childList: true, subtree: true });
+    }, 300);
 })();
 </script>
-""", unsafe_allow_html=True)
+""", height=0)
 
 # ──────────────────────────────────────────────
 # DATA: SURVEY SECTIONS

@@ -764,12 +764,42 @@ Maestría en Marketing
 
 def send_email_smtp(to_email, subject, body, smtp_server, smtp_port, sender_email, sender_password):
     from email.header import Header
-    msg = MIMEMultipart()
+    # Clean ALL inputs of non-breaking spaces and hidden unicode
+    def clean(s):
+        if isinstance(s, str):
+            return s.replace("\xa0", " ").replace("\u00a0", " ").replace("\u200b", "").strip()
+        return s
+    
+    to_email = clean(to_email)
+    subject = clean(subject)
+    body = clean(body)
+    smtp_server = clean(smtp_server)
+    sender_email = clean(sender_email)
+    sender_password = clean(sender_password)
+    
+    # Remove emojis from subject for maximum compatibility
+    import re
+    clean_subject = re.sub(r'[^\x00-\x7F]+', '', subject).strip()
+    if not clean_subject:
+        clean_subject = "Tus Resultados - Diagnostico FinPulse"
+    
+    # Build message with explicit UTF-8
+    msg = MIMEMultipart("mixed")
     msg["From"] = sender_email
     msg["To"] = to_email
-    msg["Subject"] = Header(subject, "utf-8")
-    # Clean body: replace non-breaking spaces and ensure clean UTF-8
-    clean_body = body.replace("\xa0", " ").replace("\u00a0", " ")
+    msg["Subject"] = clean_subject
+    
+    # Remove emojis from body too, replace with text equivalents
+    clean_body = body
+    emoji_map = {"💰": "[$$]", "👋": "", "🏆": "[TROFEO]", "⭐": "[ESTRELLA]", "📘": "[LIBRO]",
+                 "⚠️": "[ATENCION]", "🚨": "[ALERTA]", "═": "=", "─": "-",
+                 "📊": "[GRAFICO]", "💪": "[FUERZA]", "📋": "[PLAN]", "🏷️": "[ETIQUETA]",
+                 "📚": "[LECTURA]", "💡": "[TIP]", "🚀": "", "✅": "[OK]", "🔧": "[MEJORA]",
+                 "💸": "[GASTOS]", "🏦": "[AHORRO]", "📈": "[INVERSIONES]", "⚖️": "[DEUDA]",
+                 "🎯": "[META]", "█": "#", "░": "-"}
+    for emoji, replacement in emoji_map.items():
+        clean_body = clean_body.replace(emoji, replacement)
+    
     msg.attach(MIMEText(clean_body, "plain", "utf-8"))
     try:
         with smtplib.SMTP(smtp_server, smtp_port) as server:
@@ -940,10 +970,10 @@ elif st.session_state.stage == "results":
     # ── AUTO-SEND EMAIL on first load of results ──
     if not st.session_state.email_sent:
         try:
-            smtp_server = st.secrets["smtp"]["server"]
+            smtp_server = st.secrets["smtp"]["server"].replace("\xa0", " ").strip()
             smtp_port = int(st.secrets["smtp"]["port"])
-            sender_email = st.secrets["smtp"]["sender_email"]
-            sender_password = st.secrets["smtp"]["sender_password"]
+            sender_email = st.secrets["smtp"]["sender_email"].replace("\xa0", " ").strip()
+            sender_password = st.secrets["smtp"]["sender_password"].replace("\xa0", " ").strip()
             body = build_email_body(st.session_state.student_name, total_pct, profile, section_results, tags)
             subject = f"{profile['emoji']} Tus Resultados: {profile['name']} ({total_pct}%) - Diagnóstico FinPulse"
             ok, err = send_email_smtp(st.session_state.student_email, subject, body, smtp_server, smtp_port, sender_email, sender_password)

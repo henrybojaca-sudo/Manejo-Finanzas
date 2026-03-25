@@ -346,20 +346,36 @@ st.markdown("""
         border-radius: 12px;
         transition: all 0.2s;
     }
-    .stTextInput > div > div > input {
+    .stTextInput > div > div > input,
+    .stTextInput input,
+    input[type="text"],
+    input[type="email"],
+    [data-testid="stTextInput"] input {
         font-family: 'DM Sans', sans-serif !important;
-        background: rgba(255,255,255,0.06) !important;
-        border: 1px solid rgba(255,255,255,0.12) !important;
+        background: rgba(15, 15, 35, 0.9) !important;
+        border: 1px solid rgba(78,205,196,0.3) !important;
         border-radius: 10px !important;
-        color: #fff !important;
+        color: #FFFFFF !important;
         padding: 12px 16px !important;
         font-size: 14px !important;
+        caret-color: #4ECDC4 !important;
+        -webkit-text-fill-color: #FFFFFF !important;
     }
-    .stTextInput > div > div > input:focus {
-        border-color: rgba(78,205,196,0.5) !important;
-        box-shadow: 0 0 0 1px rgba(78,205,196,0.2) !important;
+    .stTextInput > div > div > input:focus,
+    .stTextInput input:focus,
+    [data-testid="stTextInput"] input:focus {
+        border-color: rgba(78,205,196,0.6) !important;
+        box-shadow: 0 0 0 2px rgba(78,205,196,0.2) !important;
+        background: rgba(15, 15, 35, 1) !important;
     }
-    .stTextInput label {
+    .stTextInput > div > div > input::placeholder,
+    .stTextInput input::placeholder,
+    [data-testid="stTextInput"] input::placeholder {
+        color: rgba(255,255,255,0.3) !important;
+        -webkit-text-fill-color: rgba(255,255,255,0.3) !important;
+    }
+    .stTextInput label,
+    [data-testid="stTextInput"] label {
         color: rgba(255,255,255,0.5) !important;
         font-size: 12px !important;
     }

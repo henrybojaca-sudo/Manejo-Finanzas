@@ -711,96 +711,206 @@ def compute_results(answers):
     return section_results, total_score, total_max, total_pct, profile, tags
 
 def build_email_body(name, total_pct, profile, section_results, tags):
-    sections_text = "\n".join(
-        f"   {r['icon']} {r['title']}: {'█' * (r['pct'] // 10)}{'░' * (10 - r['pct'] // 10)} {r['pct']}%"
-        for r in section_results
+    # Build section bars HTML
+    section_bars = ""
+    for r in section_results:
+        section_bars += f'''
+        <tr>
+            <td style="padding:8px 0;">
+                <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                    <tr>
+                        <td style="font-size:13px;color:#E8E8F0;font-weight:600;padding-bottom:4px;">
+                            {r['title']}
+                        </td>
+                        <td style="font-size:13px;color:{r['color']};font-weight:700;text-align:right;font-family:'Courier New',monospace;">
+                            {r['pct']}%
+                        </td>
+                    </tr>
+                    <tr>
+                        <td colspan="2">
+                            <div style="background:rgba(255,255,255,0.08);border-radius:6px;height:10px;width:100%;">
+                                <div style="background:{r['color']};border-radius:6px;height:10px;width:{r['pct']}%;"></div>
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>'''
+
+    # Build strengths
+    strengths_html = "".join(
+        f'<div style="font-size:13px;color:rgba(255,255,255,0.7);padding:3px 0;">&#10003; {s}</div>'
+        for s in profile["strengths"]
     )
-    strengths_text = "\n".join(f"   ✅ {s}" for s in profile["strengths"])
-    improvements_text = "\n".join(f"   🔧 {s}" for s in profile["improvements"])
-    tags_text = ", ".join(tags)
 
-    body = f"""¡Hola {name}! 👋
+    # Build improvements
+    improvements_html = "".join(
+        f'<div style="font-size:13px;color:rgba(255,255,255,0.7);padding:3px 0;">&#9642; {s}</div>'
+        for s in profile["improvements"]
+    )
 
-Gracias por completar el diagnóstico FinPulse de Finanzas Personales. Aquí tienes tus resultados:
+    # Build tags
+    tags_html = "".join(
+        f'<span style="display:inline-block;padding:4px 12px;border-radius:20px;font-size:11px;'
+        f'background:rgba(78,205,196,0.15);color:#4ECDC4;margin:3px 4px;">{t}</span>'
+        for t in tags
+    )
 
-{'═' * 50}
-{profile['emoji']}  TU PERFIL: {profile['name'].upper()} ({profile['grade']})
-   Puntuación General: {total_pct}%
-{'═' * 50}
+    # Grade colors for the circle
+    grade_bg = profile["color"]
 
-{profile['summary']}
+    html = f'''<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#0a0a1a;font-family:'Helvetica Neue',Arial,sans-serif;color:#E8E8F0;">
 
-📊 RESULTADOS POR ÁREA:
-{sections_text}
+<!-- Wrapper -->
+<table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#0a0a1a;">
+<tr><td align="center" style="padding:20px 16px;">
+<table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;">
 
-💪 TUS FORTALEZAS:
-{strengths_text}
+    <!-- Header -->
+    <tr><td style="padding:20px 24px;border-bottom:1px solid rgba(255,255,255,0.08);">
+        <span style="font-size:20px;font-weight:700;background:linear-gradient(135deg,#4ECDC4,#C77DFF);-webkit-background-clip:text;-webkit-text-fill-color:transparent;color:#4ECDC4;">
+            FinPulse
+        </span>
+        <span style="float:right;font-size:11px;color:rgba(255,255,255,0.3);padding-top:6px;">Diagnostico Financiero</span>
+    </td></tr>
 
-📋 PLAN DE ACCIÓN:
-{improvements_text}
+    <!-- Hero -->
+    <tr><td style="text-align:center;padding:32px 24px 20px;">
+        <!-- Score Circle -->
+        <div style="width:120px;height:120px;border-radius:50%;border:4px solid {grade_bg};margin:0 auto 16px;display:flex;align-items:center;justify-content:center;position:relative;">
+            <table cellpadding="0" cellspacing="0" border="0" width="120" height="120">
+                <tr><td align="center" valign="middle" style="width:120px;height:120px;border-radius:50%;border:4px solid {grade_bg};">
+                    <div style="font-size:36px;font-weight:700;color:{grade_bg};font-family:'Courier New',monospace;line-height:1;">{total_pct}%</div>
+                    <div style="font-size:9px;color:rgba(255,255,255,0.4);text-transform:uppercase;letter-spacing:2px;">SCORE</div>
+                </td></tr>
+            </table>
+        </div>
+        <div style="display:inline-block;padding:4px 16px;border-radius:20px;background:{grade_bg}33;border:1px solid {grade_bg}66;color:{grade_bg};font-size:12px;font-weight:600;letter-spacing:1.5px;margin-bottom:10px;">
+            GRADO {profile['grade']}
+        </div>
+        <div style="font-size:24px;font-weight:700;color:#E8E8F0;margin:8px 0 2px;">Hola, {name}</div>
+        <div style="font-size:18px;font-weight:600;color:{grade_bg};margin-bottom:8px;">{profile['name']}</div>
+        <div style="font-size:13px;color:rgba(255,255,255,0.5);line-height:1.6;max-width:440px;margin:0 auto;">
+            {profile['summary']}
+        </div>
+    </td></tr>
 
-🏷️ TU ADN FINANCIERO:
-   {tags_text}
+    <!-- Divider -->
+    <tr><td style="padding:0 24px;"><div style="height:1px;background:rgba(255,255,255,0.06);"></div></td></tr>
 
-📚 LECTURA RECOMENDADA:
-   {profile['book']}
+    <!-- Section Results -->
+    <tr><td style="padding:24px;">
+        <div style="font-size:15px;font-weight:600;color:#E8E8F0;margin-bottom:12px;">Resultados por Area</div>
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:16px;">
+            {section_bars}
+        </table>
+    </td></tr>
 
-{'─' * 50}
+    <!-- Strengths & Improvements -->
+    <tr><td style="padding:0 24px 24px;">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0">
+            <tr>
+                <td width="48%" valign="top" style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);border-radius:12px;padding:16px;">
+                    <div style="font-size:14px;font-weight:600;color:#10B981;margin-bottom:8px;">Fortalezas</div>
+                    {strengths_html}
+                </td>
+                <td width="4%"></td>
+                <td width="48%" valign="top" style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:12px;padding:16px;">
+                    <div style="font-size:14px;font-weight:600;color:#EF4444;margin-bottom:8px;">Areas de Mejora</div>
+                    {improvements_html}
+                </td>
+            </tr>
+        </table>
+    </td></tr>
 
-💡 TIPS PARA EMPEZAR HOY:
+    <!-- Tags -->
+    <tr><td style="padding:0 24px 24px;">
+        <div style="font-size:15px;font-weight:600;color:#E8E8F0;margin-bottom:10px;">Tu ADN Financiero</div>
+        <div style="line-height:2.2;">
+            {tags_html}
+        </div>
+    </td></tr>
 
-1. Descarga una app de finanzas personales
-2. Registra TODOS tus gastos durante 30 días
-3. Establece una meta de ahorro para este mes
-4. Dedica 15 min diarios a educación financiera
+    <!-- Book Recommendation -->
+    <tr><td style="padding:0 24px 24px;">
+        <div style="background:linear-gradient(135deg,rgba(78,205,196,0.1),rgba(199,125,255,0.1));border:1px solid rgba(78,205,196,0.2);border-radius:12px;padding:16px;text-align:center;">
+            <div style="font-size:13px;color:rgba(255,255,255,0.5);margin-bottom:4px;">Lectura recomendada para tu nivel</div>
+            <div style="font-size:15px;font-weight:600;color:#4ECDC4;">{profile['book'].replace('📖', '').strip()}</div>
+        </div>
+    </td></tr>
 
-¡Tú tienes el poder de transformar tu realidad financiera! 💪🚀
+    <!-- Action Tips -->
+    <tr><td style="padding:0 24px 24px;">
+        <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:20px;">
+            <div style="font-size:15px;font-weight:600;color:#FFD93D;margin-bottom:12px;">Plan de Accion Inmediato</div>
+            <div style="font-size:13px;color:rgba(255,255,255,0.6);line-height:1.8;">
+                <strong style="color:#4ECDC4;">1.</strong> Descarga una app de finanzas personales<br>
+                <strong style="color:#4ECDC4;">2.</strong> Registra TODOS tus gastos durante 30 dias<br>
+                <strong style="color:#4ECDC4;">3.</strong> Establece una meta de ahorro para este mes<br>
+                <strong style="color:#4ECDC4;">4.</strong> Dedica 15 min diarios a educacion financiera
+            </div>
+        </div>
+    </td></tr>
 
-Con aprecio,
-Programa de Finanzas Personales
-Maestría en Marketing
-"""
-    return body
+    <!-- Footer -->
+    <tr><td style="padding:20px 24px;border-top:1px solid rgba(255,255,255,0.06);text-align:center;">
+        <div style="font-size:14px;font-weight:600;color:rgba(255,255,255,0.6);margin-bottom:4px;">
+            Tu tienes el poder de transformar tu realidad financiera
+        </div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.3);margin-top:12px;">
+            Programa de Finanzas Personales<br>
+            Maestria en Marketing
+        </div>
+        <div style="margin-top:16px;">
+            <span style="font-size:16px;font-weight:700;background:linear-gradient(135deg,#4ECDC4,#C77DFF);-webkit-background-clip:text;-webkit-text-fill-color:transparent;color:#4ECDC4;">
+                FinPulse
+            </span>
+        </div>
+    </td></tr>
+
+</table>
+</td></tr>
+</table>
+
+</body>
+</html>'''
+    return html
 
 def send_email_smtp(to_email, subject, body, smtp_server, smtp_port, sender_email, sender_password):
-    from email.header import Header
     # Clean ALL inputs of non-breaking spaces and hidden unicode
     def clean(s):
         if isinstance(s, str):
             return s.replace("\xa0", " ").replace("\u00a0", " ").replace("\u200b", "").strip()
         return s
-    
+
     to_email = clean(to_email)
-    subject = clean(subject)
-    body = clean(body)
     smtp_server = clean(smtp_server)
     sender_email = clean(sender_email)
     sender_password = clean(sender_password)
-    
-    # Remove emojis from subject for maximum compatibility
+
+    # Clean subject — remove non-ASCII for header compatibility
     import re
     clean_subject = re.sub(r'[^\x00-\x7F]+', '', subject).strip()
     if not clean_subject:
         clean_subject = "Tus Resultados - Diagnostico FinPulse"
-    
-    # Build message with explicit UTF-8
-    msg = MIMEMultipart("mixed")
+
+    # Build HTML email
+    msg = MIMEMultipart("alternative")
     msg["From"] = sender_email
     msg["To"] = to_email
     msg["Subject"] = clean_subject
-    
-    # Remove emojis from body too, replace with text equivalents
-    clean_body = body
-    emoji_map = {"💰": "[$$]", "👋": "", "🏆": "[TROFEO]", "⭐": "[ESTRELLA]", "📘": "[LIBRO]",
-                 "⚠️": "[ATENCION]", "🚨": "[ALERTA]", "═": "=", "─": "-",
-                 "📊": "[GRAFICO]", "💪": "[FUERZA]", "📋": "[PLAN]", "🏷️": "[ETIQUETA]",
-                 "📚": "[LECTURA]", "💡": "[TIP]", "🚀": "", "✅": "[OK]", "🔧": "[MEJORA]",
-                 "💸": "[GASTOS]", "🏦": "[AHORRO]", "📈": "[INVERSIONES]", "⚖️": "[DEUDA]",
-                 "🎯": "[META]", "█": "#", "░": "-"}
-    for emoji, replacement in emoji_map.items():
-        clean_body = clean_body.replace(emoji, replacement)
-    
-    msg.attach(MIMEText(clean_body, "plain", "utf-8"))
+
+    # Plain text fallback
+    plain_text = re.sub(r'<[^>]+>', '', body)
+    plain_text = re.sub(r'\s+', ' ', plain_text).strip()
+    msg.attach(MIMEText(plain_text[:500] + "...\n\nPara ver el reporte completo, abre este correo en un cliente que soporte HTML.", "plain", "utf-8"))
+
+    # HTML body
+    msg.attach(MIMEText(body, "html", "utf-8"))
+
     try:
         with smtplib.SMTP(smtp_server, smtp_port) as server:
             server.starttls()

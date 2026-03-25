@@ -1,5 +1,4 @@
 import streamlit as st
-import streamlit.components.v1 as components
 import plotly.graph_objects as go
 import plotly.express as px
 import pandas as pd
@@ -346,36 +345,14 @@ st.markdown("""
         font-weight: 600;
         border-radius: 12px;
         transition: all 0.2s;
-        position: relative !important;
-        overflow: hidden !important;
     }
-    .btn-hover-overlay {
-        position: absolute !important;
-        top: 0 !important;
-        left: 0 !important;
-        right: 0 !important;
-        bottom: 0 !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        background: rgba(20, 25, 65, 0.95) !important;
+    .stButton > button:hover,
+    .stButton > button:hover p,
+    .stButton > button:hover span,
+    .stButton > button:focus,
+    .stButton > button:active {
         color: #ffffff !important;
-        font-size: 14px !important;
-        font-weight: 600 !important;
-        font-family: 'DM Sans', sans-serif !important;
-        opacity: 0 !important;
-        transition: opacity 0.2s !important;
-        border-radius: 12px !important;
-        padding: 0 20px !important;
-        text-align: center !important;
-        pointer-events: none !important;
-        white-space: normal !important;
-        word-break: break-word !important;
-        z-index: 999 !important;
-        box-sizing: border-box !important;
-    }
-    .btn-hover-overlay.visible {
-        opacity: 1 !important;
+        -webkit-text-fill-color: #ffffff !important;
     }
     .stTextInput > div > div > input,
     .stTextInput input,
@@ -423,39 +400,6 @@ st.markdown("""
     }
 </style>
 """, unsafe_allow_html=True)
-
-components.html("""
-<script>
-(function() {
-    var doc = window.parent.document;
-    function attachOverlays() {
-        doc.querySelectorAll('.stButton > button').forEach(function(btn) {
-            if (btn.querySelector('.btn-hover-overlay')) return;
-            var text = (btn.innerText || btn.textContent || '').trim();
-            if (!text) return;
-            var overlay = doc.createElement('div');
-            overlay.className = 'btn-hover-overlay';
-            overlay.textContent = text;
-            btn.style.position = 'relative';
-            btn.style.overflow = 'hidden';
-            btn.appendChild(overlay);
-            btn.addEventListener('mouseenter', function() {
-                overlay.style.opacity = '1';
-            });
-            btn.addEventListener('mouseleave', function() {
-                overlay.style.opacity = '0';
-            });
-        });
-    }
-    setTimeout(function() {
-        attachOverlays();
-        new MutationObserver(function() {
-            attachOverlays();
-        }).observe(doc.body, { childList: true, subtree: true });
-    }, 300);
-})();
-</script>
-""", height=0)
 
 # ──────────────────────────────────────────────
 # DATA: SURVEY SECTIONS

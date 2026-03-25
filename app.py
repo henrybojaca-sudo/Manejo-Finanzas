@@ -345,32 +345,36 @@ st.markdown("""
         font-weight: 600;
         border-radius: 12px;
         transition: all 0.2s;
-        position: relative;
-        overflow: hidden;
+        position: relative !important;
+        overflow: hidden !important;
     }
-    .stButton > button::after {
-        content: attr(data-tooltip);
-        position: absolute;
-        inset: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: rgba(78, 205, 196, 0.18);
-        color: #ffffff;
-        font-size: 14px;
-        font-weight: 600;
-        font-family: 'DM Sans', sans-serif;
-        opacity: 0;
-        transition: opacity 0.2s;
-        border-radius: 12px;
-        padding: 0 20px;
-        text-align: center;
-        pointer-events: none;
-        white-space: normal;
-        word-break: break-word;
+    .btn-hover-overlay {
+        position: absolute !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        background: rgba(20, 25, 65, 0.95) !important;
+        color: #ffffff !important;
+        font-size: 14px !important;
+        font-weight: 600 !important;
+        font-family: 'DM Sans', sans-serif !important;
+        opacity: 0 !important;
+        transition: opacity 0.2s !important;
+        border-radius: 12px !important;
+        padding: 0 20px !important;
+        text-align: center !important;
+        pointer-events: none !important;
+        white-space: normal !important;
+        word-break: break-word !important;
+        z-index: 999 !important;
+        box-sizing: border-box !important;
     }
-    .stButton > button:hover::after {
-        opacity: 1;
+    .btn-hover-overlay.visible {
+        opacity: 1 !important;
     }
     .stTextInput > div > div > input,
     .stTextInput input,
@@ -419,15 +423,35 @@ st.markdown("""
 </style>
 <script>
 (function() {
-    function applyTooltips() {
+    function attachOverlays() {
         document.querySelectorAll('.stButton > button').forEach(function(btn) {
-            var text = btn.innerText.trim();
-            if (text) btn.setAttribute('data-tooltip', text);
+            if (btn.querySelector('.btn-hover-overlay')) return;
+            var text = (btn.innerText || btn.textContent || '').trim();
+            if (!text) return;
+            var overlay = document.createElement('div');
+            overlay.className = 'btn-hover-overlay';
+            overlay.textContent = text;
+            btn.style.position = 'relative';
+            btn.style.overflow = 'hidden';
+            btn.appendChild(overlay);
+            btn.addEventListener('mouseenter', function() {
+                overlay.classList.add('visible');
+            });
+            btn.addEventListener('mouseleave', function() {
+                overlay.classList.remove('visible');
+            });
         });
     }
-    var observer = new MutationObserver(applyTooltips);
-    observer.observe(document.body, { childList: true, subtree: true });
-    applyTooltips();
+    function init() {
+        attachOverlays();
+        var observer = new MutationObserver(function() { attachOverlays(); });
+        observer.observe(document.body, { childList: true, subtree: true });
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        setTimeout(init, 100);
+    }
 })();
 </script>
 """, unsafe_allow_html=True)

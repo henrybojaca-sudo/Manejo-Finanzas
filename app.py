@@ -112,16 +112,26 @@ st.markdown("""
     }
     .welcome-sections {
         display: flex;
-        gap: 20px;
+        gap: 12px;
         flex-wrap: wrap;
-        margin-top: 16px;
+        margin-top: 20px;
     }
     .welcome-section-item {
         text-align: center;
-        opacity: 0.5;
+        background: rgba(255,255,255,0.07);
+        border: 1px solid rgba(255,255,255,0.12);
+        border-radius: 12px;
+        padding: 10px 14px;
+        flex: 1;
+        min-width: 80px;
+        transition: transform 0.2s, background 0.2s;
     }
-    .welcome-section-item .ws-icon { font-size: 22px; }
-    .welcome-section-item .ws-label { font-size: 9px; color: rgba(255,255,255,0.35); margin-top: 2px; }
+    .welcome-section-item:hover {
+        background: rgba(255,255,255,0.13);
+        transform: translateY(-2px);
+    }
+    .welcome-section-item .ws-icon { font-size: 26px; display: block; }
+    .welcome-section-item .ws-label { font-size: 10px; color: rgba(255,255,255,0.85); margin-top: 6px; display: block; font-weight: 500; line-height: 1.3; }
     .form-card {
         background: rgba(255,255,255,0.03);
         border: 1px solid rgba(255,255,255,0.08);
@@ -989,9 +999,9 @@ if st.session_state.stage == "welcome":
         sections_html = '<div class="welcome-sections">'
         for s in SECTIONS:
             sections_html += (
-                f'<div class="welcome-section-item">'
-                f'<div class="ws-icon">{s["icon"]}</div>'
-                f'<div class="ws-label">{s["title"]}</div></div>'
+                f'<div class="welcome-section-item" style="border-top: 3px solid {s["color"]};">'
+                f'<span class="ws-icon">{s["icon"]}</span>'
+                f'<span class="ws-label">{s["title"]}</span></div>'
             )
         sections_html += "</div>"
         st.markdown(sections_html, unsafe_allow_html=True)

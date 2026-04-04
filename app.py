@@ -105,9 +105,9 @@ st.markdown("""
         -webkit-text-fill-color: transparent;
     }
     .welcome-sub {
-        color: rgba(255,255,255,0.45);
-        font-size: 14px;
-        line-height: 1.6;
+        color: rgba(255,255,255,0.82);
+        font-size: 15px;
+        line-height: 1.7;
         margin-bottom: 20px;
     }
     .welcome-sections {
@@ -145,8 +145,8 @@ st.markdown("""
         margin-bottom: 4px;
     }
     .form-sub {
-        font-size: 12px;
-        color: rgba(255,255,255,0.35);
+        font-size: 13px;
+        color: rgba(255,255,255,0.75);
         margin-bottom: 16px;
     }
 

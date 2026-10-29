@@ -1,13 +1,21 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import plotly.graph_objects as go
 import plotly.express as px
 import pandas as pd
 import smtplib
-import json
-import time
+import html
+import os
+import re
+import threading
+from pathlib import Path
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime
+
+DATA_FILE = Path(__file__).parent / "data" / "resultados.csv"
+_DATA_LOCK = threading.Lock()
+EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 # ──────────────────────────────────────────────
 # PAGE CONFIG
@@ -234,7 +242,7 @@ st.markdown("""
         margin-bottom: 8px;
     }
     .result-summary {
-        color: rgba(255,255,255,0.5);
+        color: rgba(255,255,255,0.8);
         font-size: 13px;
         max-width: 500px;
         margin: 0 auto;
@@ -298,11 +306,66 @@ st.markdown("""
         margin-bottom: 8px;
     }
     .insight-item {
-        font-size: 12px;
-        color: rgba(255,255,255,0.6);
+        font-size: 13px;
+        color: rgba(255,255,255,0.82);
         line-height: 1.5;
         margin-bottom: 3px;
     }
+
+    /* ── Archetype ── */
+    .archetype-card {
+        display: flex;
+        gap: 20px;
+        align-items: center;
+        padding: 20px 24px;
+        border-radius: 16px;
+        margin-bottom: 20px;
+    }
+    .archetype-emoji { font-size: 56px; line-height: 1; }
+    .archetype-kicker {
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 1.5px;
+        text-transform: uppercase;
+        color: rgba(255,255,255,0.6);
+    }
+    .archetype-name { font-size: 24px; font-weight: 700; letter-spacing: -0.5px; margin: 2px 0 6px; }
+    .archetype-desc { font-size: 14px; color: rgba(255,255,255,0.85); line-height: 1.55; }
+    .archetype-slogan { font-size: 13px; font-style: italic; margin-top: 8px; }
+
+    /* ── Bias & campaign cards ── */
+    .bias-card, .campaign-card {
+        padding: 16px 18px;
+        border-radius: 12px;
+        background: rgba(255,255,255,0.04);
+        border: 1px solid rgba(255,255,255,0.1);
+        margin-bottom: 10px;
+        height: 100%;
+    }
+    .bias-name { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
+    .bias-row { font-size: 13px; color: rgba(255,255,255,0.82); line-height: 1.5; margin-bottom: 6px; }
+    .bias-row b { color: #E8E8F0; }
+    .campaign-head { font-size: 15px; font-weight: 700; margin-bottom: 8px; }
+    .campaign-kpi {
+        display: inline-block;
+        font-family: 'Space Mono', monospace !important;
+        font-size: 11px;
+        padding: 3px 10px;
+        border-radius: 8px;
+        background: rgba(255,217,61,0.12);
+        color: #FFD93D;
+        margin-bottom: 8px;
+    }
+    .lab-result {
+        padding: 14px 18px;
+        border-radius: 12px;
+        background: rgba(78,205,196,0.08);
+        border: 1px solid rgba(78,205,196,0.25);
+        font-size: 14px;
+        color: rgba(255,255,255,0.88);
+        line-height: 1.6;
+    }
+    .lab-result b { color: #4ECDC4; }
 
     /* ── Admin ── */
     .admin-row {
@@ -373,6 +436,7 @@ st.markdown("""
     .stTextInput input,
     input[type="text"],
     input[type="email"],
+    input[type="password"],
     [data-testid="stTextInput"] input {
         font-family: 'DM Sans', sans-serif !important;
         background: rgba(255,255,255,0.92) !important;
@@ -656,7 +720,197 @@ SECTIONS = [
             },
         ],
     },
+    {
+        "id": "consumidor",
+        "title": "Consumidor vs. Marketer",
+        "icon": "🧠",
+        "color": "#FF9F1C",
+        "questions": [
+            {
+                "id": "c1",
+                "text": "Ves unos audífonos con el precio tachado: <s>$350.000</s> → HOY $199.900. ¿Qué haces?",
+                "options": [
+                    {"text": "Busco el precio en otras tiendas: el precio tachado no me dice nada", "score": 5, "tag": "comparador"},
+                    {"text": "Me parece buena oferta, pero solo compro si ya los necesitaba", "score": 4, "tag": "selectivo"},
+                    {"text": "Los guardo en el carrito y vuelvo cuando me llegue el recordatorio", "score": 2, "tag": "retargeteado", "bias": "anclaje"},
+                    {"text": "¡Me ahorro $150.000! Los compro antes de que suba", "score": 1, "tag": "anclado", "bias": "anclaje"},
+                ],
+            },
+            {
+                "id": "c2",
+                "text": "Un sitio te muestra: «Solo quedan 2 unidades · 14 personas están viendo esto». ¿Cómo reaccionas?",
+                "options": [
+                    {"text": "Lo reconozco como táctica de escasez y decido con calma", "score": 5, "tag": "inmune al FOMO"},
+                    {"text": "Me genera algo de presión, pero me doy unas horas para pensarlo", "score": 4, "tag": "pausado"},
+                    {"text": "Lo compro rápido; no quiero quedarme sin él", "score": 1, "tag": "FOMO", "bias": "escasez"},
+                    {"text": "Depende: si es algo que me encanta, caigo", "score": 2, "tag": "emocional", "bias": "escasez"},
+                ],
+            },
+            {
+                "id": "c3",
+                "text": "En el checkout aparece: «Llévalo hoy y págalo en 4 cuotas». ¿Qué piensas?",
+                "options": [
+                    {"text": "Calculo el costo total y reviso si hay intereses o comisiones ocultas", "score": 5, "tag": "calculador"},
+                    {"text": "Solo lo uso si es 0% real y la cuota cabe en mi presupuesto", "score": 4, "tag": "prudente"},
+                    {"text": "Me animo a comprar algo más caro porque la cuota se ve pequeña", "score": 1, "tag": "cuotificado", "bias": "cuotas"},
+                    {"text": "Uso cuotas seguido y a veces pierdo la cuenta de cuánto debo", "score": 1, "tag": "sobre-diferido", "bias": "cuotas"},
+                ],
+            },
+            {
+                "id": "c4",
+                "text": "Un creador de contenido que sigues recomienda un producto con su código de descuento. ¿Qué haces?",
+                "options": [
+                    {"text": "Sé que es contenido pagado; investigo reseñas independientes", "score": 5, "tag": "crítico"},
+                    {"text": "Me genera interés, pero lo comparo con otras opciones", "score": 4, "tag": "analítico"},
+                    {"text": "Si él lo usa, confío y lo compro con el código", "score": 2, "tag": "influenciable", "bias": "prueba_social"},
+                    {"text": "Ya he comprado varias cosas así y algunas casi no las uso", "score": 1, "tag": "seguidor", "bias": "prueba_social"},
+                ],
+            },
+            {
+                "id": "c5",
+                "text": "Te ofrecen 30 días gratis de una app premium, pero piden tu tarjeta. ¿Qué haces?",
+                "options": [
+                    {"text": "Activo la prueba y pongo un recordatorio para cancelar antes del cobro", "score": 5, "tag": "estratégico"},
+                    {"text": "Solo la activo si estoy dispuesto a pagarla después", "score": 4, "tag": "intencional"},
+                    {"text": "La activo y casi siempre se me olvida cancelar", "score": 1, "tag": "inercia", "bias": "default"},
+                    {"text": "Nunca reviso qué se me cobra automáticamente", "score": 1, "tag": "piloto automático", "bias": "default"},
+                ],
+            },
+        ],
+    },
 ]
+
+# Marketing tactics the student both designs (as a marketer) and falls for (as a consumer)
+BIASES = {
+    "anclaje": {
+        "name": "⚓ Efecto ancla",
+        "como": "El primer número que ves (el precio tachado) se vuelve tu referencia, aunque sea inventado.",
+        "marketer": "Mostrar un precio 'antes' alto o un plan premium carísimo para que el intermedio parezca barato.",
+        "antidoto": "Pregúntate: ¿pagaría $199.900 si nunca hubiera visto los $350.000? Compara en 2 fuentes.",
+    },
+    "escasez": {
+        "name": "⏳ Escasez y FOMO",
+        "como": "Lo escaso se percibe más valioso y la urgencia apaga el pensamiento analítico.",
+        "marketer": "Contadores de tiempo, 'últimas unidades', 'X personas viendo esto', drops limitados.",
+        "antidoto": "Regla de las 24 horas: si mañana sigue pareciéndote buena idea, cómpralo.",
+    },
+    "cuotas": {
+        "name": "🧩 Ilusión de la cuota",
+        "como": "Dividir el precio reduce el 'dolor de pagar': evalúas la cuota, no el costo total.",
+        "marketer": "Comunicar el precio por día o por cuota ('menos que un café al día').",
+        "antidoto": "Multiplica siempre: cuota × número de cuotas + intereses = precio real. Usa el simulador de abajo.",
+    },
+    "prueba_social": {
+        "name": "📱 Prueba social y autoridad",
+        "como": "Confiamos en lo que hacen personas que admiramos o que se parecen a nosotros.",
+        "marketer": "Marketing de influencers, reseñas destacadas, 'el más vendido', testimonios.",
+        "antidoto": "Busca reseñas de personas sin código de descuento y pregúntate si lo querías antes de verlo.",
+    },
+    "default": {
+        "name": "🔁 Poder del default (inercia)",
+        "como": "Tendemos a dejar las cosas como están: cancelar requiere un esfuerzo que posponemos.",
+        "marketer": "Pruebas gratis con renovación automática, casillas pre-marcadas, suscripciones por defecto.",
+        "antidoto": "Revisa tu extracto cada mes y usa el mismo poder a tu favor: automatiza tu ahorro.",
+    },
+}
+
+# Brand archetypes (Mark & Pearson) applied to the student's financial behaviour
+ARCHETYPES = {
+    "gobernante": {
+        "name": "El Gobernante", "emoji": "👑", "color": "#10B981",
+        "desc": "Tu marca financiera transmite control, orden y visión de legado. Tomas decisiones con datos y piensas a largo plazo.",
+        "slogan": "«El dinero trabaja para mí, no al revés.»",
+        "riesgo": "El exceso de control puede hacerte perder oportunidades; revisa si estás demasiado conservador.",
+    },
+    "sabio": {
+        "name": "El Sabio", "emoji": "🦉", "color": "#3B82F6",
+        "desc": "Tu fortaleza es la planeación y el conocimiento. Antes de actuar, entiendes; tu propuesta de valor es la claridad.",
+        "slogan": "«Primero entiendo, luego decido.»",
+        "riesgo": "Analizar demasiado puede convertirse en parálisis: pasa del plan a la ejecución.",
+    },
+    "explorador": {
+        "name": "El Explorador", "emoji": "🧭", "color": "#FFD93D",
+        "desc": "Te atrae descubrir nuevas oportunidades de inversión y no le temes al riesgo calculado.",
+        "slogan": "«Mi dinero también viaja y busca nuevos destinos.»",
+        "riesgo": "La curiosidad sin fondo de emergencia es peligrosa: asegura la base antes de explorar.",
+    },
+    "cuidador": {
+        "name": "El Cuidador", "emoji": "🛡️", "color": "#4ECDC4",
+        "desc": "Proteger es tu instinto: ahorras, evitas deudas innecesarias y piensas en los imprevistos.",
+        "slogan": "«Primero la tranquilidad, después todo lo demás.»",
+        "riesgo": "Proteger no es lo mismo que crecer: tu ahorro puede estar perdiendo contra la inflación.",
+    },
+    "heroe": {
+        "name": "El Héroe", "emoji": "🦸", "color": "#FF9F1C",
+        "desc": "Tu disciplina frente a la tentación es tu superpoder: resistes promociones, impulsos y presión social.",
+        "slogan": "«Ninguna oferta decide por mí.»",
+        "riesgo": "Controlar el gasto es la mitad del camino; la otra mitad es poner ese dinero a crecer.",
+    },
+    "amante": {
+        "name": "El Amante", "emoji": "❤️‍🔥", "color": "#FF6B6B",
+        "desc": "Vives el presente y valoras las experiencias. Eres el target soñado de cualquier campaña emocional.",
+        "slogan": "«Solo se vive una vez» — y la tarjeta lo sabe.",
+        "riesgo": "Tu yo del futuro también es tu cliente: dale un presupuesto para disfrutar sin culpa y sin deuda.",
+    },
+    "inocente": {
+        "name": "El Inocente", "emoji": "🌱", "color": "#C77DFF",
+        "desc": "Confías en que las cosas saldrán bien y prefieres no complicarte con números. Esa calma es valiosa, pero arriesgada.",
+        "slogan": "«Ya veremos cómo se resuelve.»",
+        "riesgo": "El optimismo no reemplaza un plan: empieza por conocer cuánto entra, cuánto sale y cuánto debes.",
+    },
+}
+
+# 30-day "campaign" templates for the weakest areas, written like a marketing brief
+CAMPAIGNS = {
+    "gastos": {
+        "objetivo": "Reducir 15% los gastos no planeados en los próximos 30 días",
+        "kpi": "KPI: % de compras no planeadas (meta < 10%)",
+        "tacticas": ["Regla de las 48 horas para compras mayores a $100.000",
+                     "Desactiva las notificaciones push de apps de compras y domicilios",
+                     "Registra cada gasto el mismo día (app o nota del celular)"],
+        "insight": "Mapea tu propio customer journey de gasto: ¿en qué touchpoints te 'convierten' más?",
+    },
+    "ahorro": {
+        "objetivo": "Automatizar un ahorro del 10% de tu ingreso",
+        "kpi": "KPI: tasa de ahorro mensual (ahorro ÷ ingreso)",
+        "tacticas": ["Programa una transferencia automática el mismo día que recibes el pago",
+                     "Abre una cuenta separada solo para tu fondo de emergencia",
+                     "Meta inicial: 1 mes de gastos; luego escala a 3"],
+        "insight": "El default es el nudge más poderoso: haz que ahorrar sea la opción por defecto.",
+    },
+    "inversiones": {
+        "objetivo": "Dar tu primer paso de inversión con un monto que no te duela",
+        "kpi": "KPI: # de instrumentos que puedes explicar (rentabilidad, riesgo, liquidez)",
+        "tacticas": ["Aprende la diferencia entre CDT, fondo de inversión colectiva y acciones",
+                     "Verifica que la entidad esté vigilada por la Superintendencia Financiera",
+                     "Define el horizonte: ¿cuándo vas a necesitar ese dinero?"],
+        "insight": "Haz investigación de mercado antes de 'comprar' una inversión, como evaluarías a un proveedor.",
+    },
+    "deuda": {
+        "objetivo": "Mapear el 100% de tus deudas y su costo real",
+        "kpi": "KPI: tasa EA promedio de tu deuda y meses para salir de ella",
+        "tacticas": ["Lista cada deuda con saldo, tasa EA, cuota y plazo",
+                     "Paga primero la de mayor tasa (avalancha) o la más pequeña (bola de nieve)",
+                     "Compra a 1 cuota con tarjeta, salvo que el 0% de interés sea real"],
+        "insight": "La cuota es el precio psicológico; el costo total es el precio real. No caigas en tu propio pricing.",
+    },
+    "planificacion": {
+        "objetivo": "Escribir 3 metas financieras SMART con monto y fecha",
+        "kpi": "KPI: % de avance mensual hacia cada meta",
+        "tacticas": ["Una meta a 1 año, una a 3 años y una a 10 años",
+                     "Agenda contigo una 'reunión de resultados' mensual de 30 minutos",
+                     "Revisa tu protección básica: salud, vida o incapacidad"],
+        "insight": "Trata tus finanzas como un plan de marketing anual: objetivos, presupuesto, KPIs y revisión.",
+    },
+    "consumidor": {
+        "objetivo": "Detectar y neutralizar 3 tácticas de persuasión esta semana",
+        "kpi": "KPI: # de compras evitadas por identificar una táctica",
+        "tacticas": ["Antes de pagar, pregúntate: ¿qué táctica me están aplicando?",
+                     "Compara el precio en al menos 2 fuentes e ignora el precio tachado",
+                     "Deja de seguir cuentas que solo te venden"],
+        "insight": "Tú diseñas estas estrategias: aplica tu ojo crítico de marketer cuando el target eres tú.",
+    },
+}
 
 PROFILES = [
     {
@@ -739,7 +993,87 @@ def compute_results(answers):
     tags = [answers[qid]["tag"] for qid in answers]
     return section_results, total_score, total_max, total_pct, profile, tags
 
-def build_email_body(name, total_pct, profile, section_results, tags):
+def esc(s):
+    """Escape user/content text for HTML and keep '$' from being parsed as LaTeX."""
+    return html.escape(str(s)).replace("$", "&#36;")
+
+def get_archetype(section_results, total_pct):
+    pcts = {r["id"]: r["pct"] for r in section_results}
+    if total_pct >= 80:
+        return ARCHETYPES["gobernante"]
+    if total_pct < 50:
+        weakest = min(pcts, key=pcts.get)
+        return ARCHETYPES["amante" if weakest in ("gastos", "consumidor") else "inocente"]
+    strongest = max(pcts, key=pcts.get)
+    return ARCHETYPES[{
+        "planificacion": "sabio",
+        "inversiones": "explorador",
+        "ahorro": "cuidador",
+        "deuda": "cuidador",
+        "gastos": "heroe",
+        "consumidor": "heroe",
+    }[strongest]]
+
+def get_biases(answers):
+    """Return the bias ids triggered by the answers, in question order, without duplicates."""
+    found = []
+    for s in SECTIONS:
+        for q in s["questions"]:
+            b = answers.get(q["id"], {}).get("bias")
+            if b and b not in found:
+                found.append(b)
+    return found
+
+def get_weakest_sections(section_results, n=2):
+    return sorted(section_results, key=lambda r: r["pct"])[:n]
+
+def tag_color(qid):
+    for s in SECTIONS:
+        if any(q["id"] == qid for q in s["questions"]):
+            return s["color"]
+    return "#4ECDC4"
+
+def save_result(row):
+    DATA_FILE.parent.mkdir(parents=True, exist_ok=True)
+    with _DATA_LOCK:
+        pd.DataFrame([row]).to_csv(DATA_FILE, mode="a", header=not DATA_FILE.exists(), index=False, encoding="utf-8")
+
+def load_results():
+    if not DATA_FILE.exists():
+        return pd.DataFrame()
+    with _DATA_LOCK:
+        return pd.read_csv(DATA_FILE, encoding="utf-8")
+
+def get_admin_password():
+    try:
+        return st.secrets["admin"]["password"]
+    except Exception:
+        return os.environ.get("FINPULSE_ADMIN_PASSWORD")
+
+def monthly_rate(ea_pct):
+    return (1 + ea_pct / 100) ** (1 / 12) - 1
+
+def fmt_cop(x):
+    return "$" + f"{x:,.0f}".replace(",", ".")
+
+def build_email_body(name, total_pct, profile, section_results, tags, biases=()):
+    name = esc(name)
+    archetype = get_archetype(section_results, total_pct)
+    campaign_html = "".join(
+        f'<div style="margin-bottom:12px;"><div style="font-size:14px;font-weight:600;color:{r["color"]};">'
+        f'{r["title"]}: {esc(CAMPAIGNS[r["id"]]["objetivo"])}</div>'
+        f'<div style="font-size:12px;color:#FFD93D;font-family:\'Courier New\',monospace;">{esc(CAMPAIGNS[r["id"]]["kpi"])}</div>'
+        + "".join(f'<div style="font-size:13px;color:rgba(255,255,255,0.75);padding:2px 0;">&#9642; {esc(t)}</div>'
+                  for t in CAMPAIGNS[r["id"]]["tacticas"])
+        + "</div>"
+        for r in get_weakest_sections(section_results)
+    )
+    biases_html = "".join(
+        f'<div style="font-size:13px;color:rgba(255,255,255,0.75);padding:4px 0;">'
+        f'<strong style="color:#FF9F1C;">{esc(BIASES[b]["name"])}</strong> &mdash; {esc(BIASES[b]["antidoto"])}</div>'
+        for b in biases
+    ) or '<div style="font-size:13px;color:rgba(255,255,255,0.75);">No caíste en ninguna táctica. ¡Ojo de marketer entrenado!</div>'
+
     # Build section bars HTML
     section_bars = ""
     for r in section_results:
@@ -781,7 +1115,7 @@ def build_email_body(name, total_pct, profile, section_results, tags):
     # Build tags
     tags_html = "".join(
         f'<span style="display:inline-block;padding:4px 12px;border-radius:20px;font-size:11px;'
-        f'background:rgba(78,205,196,0.15);color:#4ECDC4;margin:3px 4px;">{t}</span>'
+        f'background:rgba(78,205,196,0.15);color:#4ECDC4;margin:3px 4px;">{esc(t)}</span>'
         for t in tags
     )
 
@@ -824,6 +1158,17 @@ def build_email_body(name, total_pct, profile, section_results, tags):
         <div style="font-size:18px;font-weight:600;color:{grade_bg};margin-bottom:8px;">{profile['name']}</div>
         <div style="font-size:13px;color:rgba(255,255,255,0.5);line-height:1.6;max-width:440px;margin:0 auto;">
             {profile['summary']}
+        </div>
+    </td></tr>
+
+    <!-- Archetype -->
+    <tr><td style="padding:0 24px 24px;">
+        <div style="background:{archetype['color']}1A;border:1px solid {archetype['color']}55;border-radius:12px;padding:18px;text-align:center;">
+            <div style="font-size:11px;color:rgba(255,255,255,0.6);letter-spacing:1.5px;text-transform:uppercase;">Tu arquetipo de marca financiera</div>
+            <div style="font-size:34px;margin:6px 0;">{archetype['emoji']}</div>
+            <div style="font-size:20px;font-weight:700;color:{archetype['color']};">{archetype['name']}</div>
+            <div style="font-size:13px;color:rgba(255,255,255,0.75);line-height:1.6;margin-top:6px;">{esc(archetype['desc'])}</div>
+            <div style="font-size:13px;font-style:italic;color:{archetype['color']};margin-top:6px;">{esc(archetype['slogan'])}</div>
         </div>
     </td></tr>
 
@@ -871,16 +1216,19 @@ def build_email_body(name, total_pct, profile, section_results, tags):
         </div>
     </td></tr>
 
-    <!-- Action Tips -->
+    <!-- 30-day campaign -->
     <tr><td style="padding:0 24px 24px;">
         <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:20px;">
-            <div style="font-size:15px;font-weight:600;color:#FFD93D;margin-bottom:12px;">Plan de Accion Inmediato</div>
-            <div style="font-size:13px;color:rgba(255,255,255,0.6);line-height:1.8;">
-                <strong style="color:#4ECDC4;">1.</strong> Descarga una app de finanzas personales<br>
-                <strong style="color:#4ECDC4;">2.</strong> Registra TODOS tus gastos durante 30 dias<br>
-                <strong style="color:#4ECDC4;">3.</strong> Establece una meta de ahorro para este mes<br>
-                <strong style="color:#4ECDC4;">4.</strong> Dedica 15 min diarios a educacion financiera
-            </div>
+            <div style="font-size:15px;font-weight:600;color:#FFD93D;margin-bottom:12px;">Tu campaña de 30 días</div>
+            {campaign_html}
+        </div>
+    </td></tr>
+
+    <!-- Biases -->
+    <tr><td style="padding:0 24px 24px;">
+        <div style="background:rgba(255,159,28,0.08);border:1px solid rgba(255,159,28,0.25);border-radius:12px;padding:20px;">
+            <div style="font-size:15px;font-weight:600;color:#FF9F1C;margin-bottom:10px;">Tácticas de marketing que funcionan contigo</div>
+            {biases_html}
         </div>
     </td></tr>
 
@@ -921,7 +1269,6 @@ def send_email_smtp(to_email, subject, body, smtp_server, smtp_port, sender_emai
     sender_password = clean(sender_password)
 
     # Clean subject — remove non-ASCII for header compatibility
-    import re
     clean_subject = re.sub(r'[^\x00-\x7F]+', '', subject).strip()
     if not clean_subject:
         clean_subject = "Tus Resultados - Diagnostico FinPulse"
@@ -952,9 +1299,12 @@ def send_email_smtp(to_email, subject, body, smtp_server, smtp_port, sender_emai
 # ──────────────────────────────────────────────
 # SESSION STATE INIT
 # ──────────────────────────────────────────────
-for key, default in [("stage", "welcome"), ("answers", {}), ("current_section", 0),
-                      ("current_q", 0), ("student_name", ""), ("student_email", ""),
-                      ("all_students", []), ("email_sent", False), ("email_status", "")]:
+SURVEY_DEFAULTS = {
+    "stage": "welcome", "answers": {}, "current_section": 0, "current_q": 0,
+    "student_name": "", "student_email": "", "email_sent": False, "email_status": "",
+    "processed": False,
+}
+for key, default in list(SURVEY_DEFAULTS.items()) + [("admin_ok", False)]:
     if key not in st.session_state:
         st.session_state[key] = default
 
@@ -966,11 +1316,11 @@ with hcol1:
     st.markdown('<div class="finpulse-logo">💰 FinPulse</div>', unsafe_allow_html=True)
 with hcol3:
     if st.session_state.stage != "admin":
-        if st.button("📊 Admin", use_container_width=True):
+        if st.button("📊 Admin", width="stretch"):
             st.session_state.stage = "admin"
             st.rerun()
     else:
-        if st.button("← Volver", use_container_width=True):
+        if st.button("← Volver", width="stretch"):
             st.session_state.stage = "welcome" if not st.session_state.answers else "results"
             st.rerun()
 
@@ -991,8 +1341,9 @@ if st.session_state.stage == "welcome":
         )
         st.markdown(
             '<div class="welcome-sub">'
-            "Descubre tu perfil financiero en 5 minutos. Responde con honestidad "
-            "— no hay respuestas correctas, solo tu realidad.</div>",
+            "Descubre tu perfil financiero, el arquetipo de marca que define tu relación con el dinero "
+            "y qué tácticas de marketing —las mismas que tú diseñas— funcionan contigo. "
+            "Responde con honestidad: no hay respuestas correctas, solo tu realidad.</div>",
             unsafe_allow_html=True,
         )
         # Section icons
@@ -1016,8 +1367,11 @@ if st.session_state.stage == "welcome":
         )
         name = st.text_input("Nombre completo", value=st.session_state.student_name, placeholder="Ej: María López García", label_visibility="collapsed")
         email = st.text_input("Correo electrónico", value=st.session_state.student_email, placeholder="Ej: maria@universidad.edu.co", label_visibility="collapsed")
+        email_ok = bool(EMAIL_RE.match(email.strip()))
+        if email.strip() and not email_ok:
+            st.caption("⚠️ Revisa el correo: parece incompleto (ej: nombre@dominio.com)")
 
-        if st.button("🚀  Comenzar Diagnóstico →", use_container_width=True, type="primary", disabled=not (name.strip() and email.strip())):
+        if st.button("🚀  Comenzar Diagnóstico →", width="stretch", type="primary", disabled=not (name.strip() and email_ok)):
             st.session_state.student_name = name.strip()
             st.session_state.student_email = email.strip()
             st.session_state.stage = "survey"
@@ -1025,11 +1379,13 @@ if st.session_state.stage == "welcome":
             st.session_state.current_section = 0
             st.session_state.current_q = 0
             st.session_state.email_sent = False
+            st.session_state.processed = False
             st.rerun()
 
         st.markdown(
-            '<p style="font-size:11px;color:rgba(255,255,255,0.25);text-align:center;margin-top:8px;">'
-            "19 preguntas · 5 secciones · ~5 minutos</p>",
+            '<p style="font-size:11px;color:rgba(255,255,255,0.6);text-align:center;margin-top:8px;">'
+            f"{get_total_questions()} preguntas · {len(SECTIONS)} secciones · ~6 minutos<br>"
+            "Al final: tu arquetipo de marca financiera 🧬</p>",
             unsafe_allow_html=True,
         )
 
@@ -1066,17 +1422,22 @@ elif st.session_state.stage == "survey":
         )
 
         # Question
-        st.markdown(f'<div class="question-text">{question["text"]}</div>', unsafe_allow_html=True)
+        # Question text may contain trusted inline HTML (e.g. <s>); only neutralise '$' so it isn't read as LaTeX
+        st.markdown(f'<div class="question-text">{question["text"].replace("$", "&#36;")}</div>', unsafe_allow_html=True)
 
         # Options
         letters = ["A", "B", "C", "D"]
+        previous = st.session_state.answers.get(question["id"], {}).get("text")
         for i, opt in enumerate(question["options"]):
             if st.button(
-                f"  {letters[i]}   ·   {opt['text']}",
+                f"  {letters[i]}   ·   {opt['text'].replace('$', chr(92) + '$')}",
                 key=f"opt_{question['id']}_{i}",
-                use_container_width=True,
+                width="stretch",
+                type="primary" if opt["text"] == previous else "secondary",
             ):
-                st.session_state.answers[question["id"]] = {"score": opt["score"], "tag": opt["tag"], "text": opt["text"]}
+                st.session_state.answers[question["id"]] = {
+                    "score": opt["score"], "tag": opt["tag"], "text": opt["text"], "bias": opt.get("bias"),
+                }
                 sec = st.session_state.current_section
                 q = st.session_state.current_q
                 if q < len(SECTIONS[sec]["questions"]) - 1:
@@ -1087,6 +1448,14 @@ elif st.session_state.stage == "survey":
                 else:
                     st.session_state.stage = "results"
                 st.rerun()
+
+        if q_num > 1 and st.button("← Pregunta anterior", key="prev_q"):
+            if st.session_state.current_q > 0:
+                st.session_state.current_q -= 1
+            else:
+                st.session_state.current_section -= 1
+                st.session_state.current_q = len(SECTIONS[st.session_state.current_section]["questions"]) - 1
+            st.rerun()
 
         # Dots
         dots_html = '<div class="progress-dots">'
@@ -1104,18 +1473,24 @@ elif st.session_state.stage == "survey":
 # RESULTS SCREEN
 # ══════════════════════════════════════════════
 elif st.session_state.stage == "results":
-    section_results, total_score, total_max, total_pct, profile, tags = compute_results(st.session_state.answers)
+    answers = st.session_state.answers
+    section_results, total_score, total_max, total_pct, profile, tags = compute_results(answers)
+    archetype = get_archetype(section_results, total_pct)
+    biases = get_biases(answers)
+    weakest = get_weakest_sections(section_results)
+    student_name = st.session_state.student_name
+    email_body = build_email_body(student_name, total_pct, profile, section_results, tags, biases)
+    email_subject = f"{profile['emoji']} Tus Resultados: {profile['name']} ({total_pct}%) - Diagnóstico FinPulse"
 
-    # ── AUTO-SEND EMAIL on first load of results ──
-    if not st.session_state.email_sent:
+    # ── Send email + register ONCE per completed survey (the lab widgets below trigger many reruns) ──
+    if not st.session_state.processed:
+        st.session_state.processed = True
         try:
             smtp_server = st.secrets["smtp"]["server"].replace("\xa0", " ").strip()
             smtp_port = int(st.secrets["smtp"]["port"])
             sender_email = st.secrets["smtp"]["sender_email"].replace("\xa0", " ").strip()
             sender_password = st.secrets["smtp"]["sender_password"].replace("\xa0", " ").strip()
-            body = build_email_body(st.session_state.student_name, total_pct, profile, section_results, tags)
-            subject = f"{profile['emoji']} Tus Resultados: {profile['name']} ({total_pct}%) - Diagnóstico FinPulse"
-            ok, err = send_email_smtp(st.session_state.student_email, subject, body, smtp_server, smtp_port, sender_email, sender_password)
+            ok, err = send_email_smtp(st.session_state.student_email, email_subject, email_body, smtp_server, smtp_port, sender_email, sender_password)
             if ok:
                 st.session_state.email_sent = True
                 st.session_state.email_status = "success"
@@ -1123,13 +1498,18 @@ elif st.session_state.stage == "results":
                 st.session_state.email_status = f"error: {err}"
         except Exception:
             st.session_state.email_status = "no_secrets"
-        # Register student regardless
-        if not any(s["email"] == st.session_state.student_email and s["score"] == total_pct for s in st.session_state.all_students):
-            st.session_state.all_students.append({
-                "name": st.session_state.student_name, "email": st.session_state.student_email,
-                "score": total_pct, "profile": profile["name"], "grade": profile["grade"],
-                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M"),
-            })
+        row = {
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M"),
+            "name": student_name, "email": st.session_state.student_email,
+            "score": total_pct, "profile": profile["name"], "grade": profile["grade"],
+            "archetype": archetype["name"],
+            **{f"pct_{r['id']}": r["pct"] for r in section_results},
+            "biases": ";".join(biases),
+        }
+        try:
+            save_result(row)
+        except Exception as e:
+            st.toast(f"No se pudo guardar el resultado: {e}")
 
     # Hero
     st.markdown(
@@ -1137,9 +1517,23 @@ elif st.session_state.stage == "results":
         f'<div class="result-emoji">{profile["emoji"]}</div>'
         f'<div class="grade-badge" style="background:{profile["color"]}20;border:1px solid {profile["color"]}40;color:{profile["color"]};">'
         f'GRADO {profile["grade"]}</div><br>'
-        f'<div class="result-name">{st.session_state.student_name}</div>'
+        f'<div class="result-name">{esc(student_name)}</div>'
         f'<div class="result-profile" style="color:{profile["color"]};">{profile["name"]}</div>'
         f'<div class="result-summary">{profile["summary"]}</div></div>',
+        unsafe_allow_html=True,
+    )
+
+    # Archetype
+    a = archetype
+    st.markdown(
+        f'<div class="archetype-card" style="background:{a["color"]}14;border:1px solid {a["color"]}55;">'
+        f'<div class="archetype-emoji">{a["emoji"]}</div><div>'
+        f'<div class="archetype-kicker">Tu arquetipo de marca financiera</div>'
+        f'<div class="archetype-name" style="color:{a["color"]};">{a["name"]}</div>'
+        f'<div class="archetype-desc">{esc(a["desc"])}</div>'
+        f'<div class="archetype-slogan" style="color:{a["color"]};">Tu slogan: {esc(a["slogan"])}</div>'
+        f'<div class="archetype-desc" style="margin-top:8px;"><b>⚠️ Riesgo de marca:</b> {esc(a["riesgo"])}</div>'
+        f'</div></div>',
         unsafe_allow_html=True,
     )
 
@@ -1164,14 +1558,14 @@ elif st.session_state.stage == "results":
                     {"range": [85, 100], "color": "rgba(16,185,129,0.1)"},
                 ],
             },
-            title={"text": "Score General", "font": {"size": 13, "color": "rgba(255,255,255,0.5)"}},
+            title={"text": "Score General", "font": {"size": 13, "color": "rgba(255,255,255,0.6)"}},
         ))
         fig_gauge.update_layout(
             paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
             height=250, margin=dict(t=50, b=10, l=25, r=25),
             font={"family": "DM Sans"},
         )
-        st.plotly_chart(fig_gauge, use_container_width=True)
+        st.plotly_chart(fig_gauge, width="stretch")
 
     with col_radar:
         categories = [f'{r["icon"]} {r["title"]}' for r in section_results]
@@ -1189,13 +1583,13 @@ elif st.session_state.stage == "results":
             polar=dict(
                 bgcolor="rgba(0,0,0,0)",
                 radialaxis=dict(visible=True, range=[0, 100], tickfont=dict(size=8, color="rgba(255,255,255,0.3)"), gridcolor="rgba(255,255,255,0.06)"),
-                angularaxis=dict(tickfont=dict(size=10, color="rgba(255,255,255,0.6)"), gridcolor="rgba(255,255,255,0.06)"),
+                angularaxis=dict(tickfont=dict(size=10, color="rgba(255,255,255,0.7)"), gridcolor="rgba(255,255,255,0.06)"),
             ),
             paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-            height=260, margin=dict(t=30, b=30, l=50, r=50),
+            height=260, margin=dict(t=30, b=30, l=90, r=90),
             showlegend=False, font={"family": "DM Sans"},
         )
-        st.plotly_chart(fig_radar, use_container_width=True)
+        st.plotly_chart(fig_radar, width="stretch")
 
     # Section Bars
     st.markdown("#### 📊 Resultados por Sección")
@@ -1210,26 +1604,44 @@ elif st.session_state.stage == "results":
             unsafe_allow_html=True,
         )
 
-    # Bar chart
-    fig_bar = go.Figure()
-    for r in section_results:
-        fig_bar.add_trace(go.Bar(
-            x=[r["title"]], y=[r["pct"]],
-            marker_color=r["color"], name=r["title"],
-            text=[f'{r["pct"]}%'], textposition="outside",
-            textfont=dict(color="rgba(255,255,255,0.7)", size=12, family="Space Mono"),
-        ))
-    fig_bar.update_layout(
-        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-        height=280, showlegend=False,
-        yaxis=dict(range=[0, 110], gridcolor="rgba(255,255,255,0.04)", tickfont=dict(color="rgba(255,255,255,0.3)")),
-        xaxis=dict(tickfont=dict(color="rgba(255,255,255,0.5)", size=10)),
-        margin=dict(t=15, b=30, l=35, r=15),
-        font={"family": "DM Sans"},
-    )
-    st.plotly_chart(fig_bar, use_container_width=True)
+    # ── Marketer's mirror: tactics that work on the student ──
+    st.markdown("#### 🧠 Espejo del marketer: tácticas que funcionan contigo")
+    st.caption("Como profesional de marketing diseñas estas estrategias. Como consumidor, también caes en ellas.")
+    if biases:
+        cols = st.columns(2)
+        for i, b in enumerate(biases):
+            info = BIASES[b]
+            with cols[i % 2]:
+                st.markdown(
+                    f'<div class="bias-card" style="border-left:4px solid #FF9F1C;">'
+                    f'<div class="bias-name" style="color:#FF9F1C;">{esc(info["name"])}</div>'
+                    f'<div class="bias-row"><b>Cómo funciona:</b> {esc(info["como"])}</div>'
+                    f'<div class="bias-row"><b>Cuando tú eres el marketer:</b> {esc(info["marketer"])}</div>'
+                    f'<div class="bias-row"><b>🛡️ Antídoto:</b> {esc(info["antidoto"])}</div></div>',
+                    unsafe_allow_html=True,
+                )
+    else:
+        st.success("🛡️ No caíste en ninguna de las tácticas evaluadas. ¡Tienes ojo de marketer entrenado!")
+
+    # ── 30-day campaign for the two weakest areas ──
+    st.markdown("#### 🎯 Tu campaña de 30 días")
+    st.caption("Un brief de marketing… pero el producto eres tú. Enfocado en tus dos áreas con más oportunidad.")
+    cols = st.columns(len(weakest))
+    for col, r in zip(cols, weakest):
+        c = CAMPAIGNS[r["id"]]
+        with col:
+            st.markdown(
+                f'<div class="campaign-card" style="border-top:3px solid {r["color"]};">'
+                f'<div class="campaign-head" style="color:{r["color"]};">{r["icon"]} {r["title"]} · {r["pct"]}%</div>'
+                f'<div class="bias-row"><b>Objetivo SMART:</b> {esc(c["objetivo"])}</div>'
+                f'<div class="campaign-kpi">{esc(c["kpi"])}</div>'
+                + "".join(f'<div class="insight-item">▸ {esc(t)}</div>' for t in c["tacticas"])
+                + f'<div class="bias-row" style="margin-top:8px;font-style:italic;">💡 {esc(c["insight"])}</div></div>',
+                unsafe_allow_html=True,
+            )
 
     # Strengths & Improvements
+    st.markdown("")
     col_s, col_i = st.columns(2)
     with col_s:
         st.markdown(
@@ -1249,31 +1661,144 @@ elif st.session_state.stage == "results":
     # Tags
     st.markdown("#### 🏷️ Tu ADN Financiero")
     tags_html = '<div class="tag-cloud">'
-    for i, t in enumerate(tags):
-        c = SECTIONS[min(i // 4, len(SECTIONS) - 1)]["color"]
-        tags_html += f'<span class="tag" style="background:{c}15;border:1px solid {c}30;color:{c};">{t}</span>'
+    for qid, ans in answers.items():
+        c = tag_color(qid)
+        tags_html += f'<span class="tag" style="background:{c}15;border:1px solid {c}30;color:{c};">{esc(ans["tag"])}</span>'
     tags_html += "</div>"
     st.markdown(tags_html, unsafe_allow_html=True)
 
+    # ── Financial lab: interactive simulators ──
+    st.markdown("#### 🧪 Laboratorio financiero")
+    st.caption("Juega con tus propios números. Cifras ilustrativas con fines educativos; no constituyen asesoría financiera.")
+    tab_funnel, tab_hormiga, tab_cuotas = st.tabs(["🔻 El embudo de tu dinero", "☕ Gastos hormiga", "💳 Simulador de cuotas"])
+
+    with tab_funnel:
+        f1, f2 = st.columns([1, 1.3])
+        with f1:
+            ingreso = st.number_input("Ingreso mensual (COP)", min_value=0, value=3_000_000, step=100_000, key="lab_ingreso")
+            fijos = st.slider("% Gastos fijos (arriendo, servicios, transporte, mercado)", 0, 100, 50, key="lab_fijos")
+            variables = st.slider("% Gastos variables (salidas, compras, domicilios)", 0, 100, 30, key="lab_variables")
+            deudas = st.slider("% Pago de deudas (tarjetas, créditos)", 0, 100, 10, key="lab_deudas")
+        usado = fijos + variables + deudas
+        ahorro_pct = max(0, 100 - usado)
+        etapas = [ingreso, ingreso * (1 - fijos / 100), ingreso * (1 - (fijos + variables) / 100), ingreso * ahorro_pct / 100]
+        etapas = [max(0, v) for v in etapas]
+        with f2:
+            fig_funnel = go.Figure(go.Funnel(
+                y=["Ingreso", "Después de gastos fijos", "Después de gastos variables", "Ahorro (conversión final)"],
+                x=etapas,
+                text=[fmt_cop(v) for v in etapas], textinfo="text", textposition="auto",
+                marker=dict(color=["#4ECDC4", "#FFD93D", "#FF9F1C", "#10B981"]),
+                insidetextfont=dict(family="Space Mono", color="#0a0a1a", size=13),
+                outsidetextfont=dict(family="Space Mono", color="#E8E8F0", size=13),
+            ))
+            fig_funnel.update_layout(
+                paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", height=300,
+                margin=dict(t=10, b=10, l=10, r=10), font=dict(family="DM Sans", color="rgba(255,255,255,0.8)"),
+            )
+            st.plotly_chart(fig_funnel, width="stretch")
+        if usado > 100:
+            st.error(f"⚠️ Estás asignando {usado}% de tu ingreso: gastas más de lo que ganas. Ese faltante normalmente se cubre con deuda.")
+        else:
+            diag = []
+            diag.append("✅ Necesidades dentro del 50%" if fijos <= 50 else f"⚠️ Gastos fijos en {fijos}% (referencia: 50%)")
+            diag.append("✅ Deseos dentro del 30%" if variables <= 30 else f"⚠️ Gastos variables en {variables}% (referencia: 30%)")
+            diag.append("✅ Ahorro de 20% o más" if ahorro_pct >= 20 else f"⚠️ Ahorro de {ahorro_pct}% (referencia: 20%)")
+            st.markdown(
+                f'<div class="lab-result">Tu <b>tasa de conversión a ahorro</b> es <b>{ahorro_pct}%</b>: '
+                f'de cada {fmt_cop(100_000)} que entran, conviertes <b>{fmt_cop(1000 * ahorro_pct)}</b> en ahorro.<br>'
+                f'Comparado con la regla 50/30/20: {" · ".join(diag)}</div>',
+                unsafe_allow_html=True,
+            )
+
+    with tab_hormiga:
+        h1, h2 = st.columns([1, 1.3])
+        with h1:
+            gasto_dia = st.number_input("Tu gasto hormiga (café, snack, domicilio…) por día (COP)", min_value=0, value=8_000, step=1_000, key="lab_hormiga")
+            dias = st.slider("Días por semana", 1, 7, 5, key="lab_dias")
+            anos = st.slider("Horizonte (años)", 1, 30, 10, key="lab_anos")
+            tasa_inv = st.slider("Rentabilidad anual si lo invirtieras (EA %)", 0.0, 20.0, 9.0, 0.5, key="lab_tasa_inv")
+        mensual = gasto_dia * dias * 52 / 12
+        i = monthly_rate(tasa_inv)
+        meses = list(range(0, anos * 12 + 1))
+        aportado = [mensual * m for m in meses]
+        invertido = [mensual * ((1 + i) ** m - 1) / i if i > 0 else mensual * m for m in meses]
+        with h2:
+            fig_h = go.Figure()
+            fig_h.add_trace(go.Scatter(x=[m / 12 for m in meses], y=invertido, name="Si lo inviertes", fill="tozeroy",
+                                       line=dict(color="#4ECDC4", width=2), fillcolor="rgba(78,205,196,0.15)"))
+            fig_h.add_trace(go.Scatter(x=[m / 12 for m in meses], y=aportado, name="Lo que gastas", line=dict(color="#FF6B6B", width=2, dash="dot")))
+            fig_h.update_layout(
+                paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", height=300,
+                margin=dict(t=10, b=30, l=50, r=10), font=dict(family="DM Sans", color="rgba(255,255,255,0.7)"),
+                legend=dict(orientation="h", y=1.1), xaxis=dict(title="Años", gridcolor="rgba(255,255,255,0.05)"),
+                yaxis=dict(gridcolor="rgba(255,255,255,0.05)", tickformat=",.0f"),
+            )
+            st.plotly_chart(fig_h, width="stretch")
+        st.markdown(
+            f'<div class="lab-result">Ese gasto suma <b>{fmt_cop(mensual)}</b> al mes. En {anos} años habrás gastado '
+            f'<b>{fmt_cop(aportado[-1])}</b>; invertido al {tasa_inv:.1f}% EA serían <b>{fmt_cop(invertido[-1])}</b>.<br>'
+            f'Como diría un marketer: el <i>lifetime value</i> de tu café diario es {fmt_cop(invertido[-1])}.</div>',
+            unsafe_allow_html=True,
+        )
+
+    with tab_cuotas:
+        k1, k2 = st.columns([1, 1.3])
+        with k1:
+            precio = st.number_input("Precio de la compra (COP)", min_value=0, value=2_000_000, step=100_000, key="lab_precio")
+            tasa_tc = st.slider("Tasa de interés de tu tarjeta (EA %) — revisa tu extracto", 0.0, 40.0, 26.0, 0.5, key="lab_tasa_tc")
+            n_cuotas = st.select_slider("Número de cuotas", options=[1, 3, 6, 12, 24, 36], value=24, key="lab_cuotas")
+        i = monthly_rate(tasa_tc)
+
+        def plan(n):
+            # In Colombia, purchases at 1 installment are typically interest-free
+            if n == 1 or i == 0:
+                return precio / n, 0.0
+            cuota = precio * i / (1 - (1 + i) ** -n)
+            return cuota, cuota * n - precio
+
+        opciones = [1, 3, 6, 12, 24, 36]
+        intereses = [plan(n)[1] for n in opciones]
+        with k2:
+            fig_c = go.Figure()
+            fig_c.add_trace(go.Bar(x=[f"{n} cuota{'s' if n > 1 else ''}" for n in opciones], y=[precio] * len(opciones), name="Precio", marker_color="#4ECDC4"))
+            fig_c.add_trace(go.Bar(x=[f"{n} cuota{'s' if n > 1 else ''}" for n in opciones], y=intereses, name="Intereses", marker_color="#FF6B6B",
+                                   text=[fmt_cop(v) if v else "" for v in intereses], textposition="outside",
+                                   textfont=dict(family="Space Mono", size=10, color="rgba(255,255,255,0.8)")))
+            fig_c.update_layout(
+                barmode="stack", paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", height=300,
+                margin=dict(t=30, b=30, l=50, r=10), font=dict(family="DM Sans", color="rgba(255,255,255,0.7)"),
+                legend=dict(orientation="h", y=1.15), yaxis=dict(gridcolor="rgba(255,255,255,0.05)", tickformat=",.0f"),
+            )
+            st.plotly_chart(fig_c, width="stretch")
+        cuota, interes = plan(n_cuotas)
+        st.markdown(
+            f'<div class="lab-result">A <b>{n_cuotas}</b> cuota{"s" if n_cuotas > 1 else ""} pagarías <b>{fmt_cop(cuota)}</b> al mes. '
+            f'El precio real termina siendo <b>{fmt_cop(precio + interes)}</b>: '
+            f'<b>{fmt_cop(interes)}</b> en intereses ({(interes / precio * 100) if precio else 0:.0f}% más caro).<br>'
+            f'La cuota es el precio que te comunican; el total es el precio que pagas.</div>',
+            unsafe_allow_html=True,
+        )
+
     # Book
+    st.markdown("")
     st.info(f"📚 **Lectura recomendada:** {profile['book']}")
 
     # ── Email Status ──
     st.divider()
     email_status = st.session_state.get("email_status", "")
-    
+
     if email_status == "success":
         st.markdown(
             f'<div style="padding:20px;border-radius:14px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);text-align:center;">'
             f'<div style="font-size:28px;margin-bottom:8px;">✅</div>'
             f'<div style="font-size:16px;font-weight:600;color:#10B981;margin-bottom:4px;">¡Correo enviado automáticamente!</div>'
-            f'<div style="font-size:13px;color:rgba(255,255,255,0.5);">Revisa tu bandeja en <strong style="color:#4ECDC4;">{st.session_state.student_email}</strong></div>'
+            f'<div style="font-size:13px;color:rgba(255,255,255,0.7);">Revisa tu bandeja en <strong style="color:#4ECDC4;">{esc(st.session_state.student_email)}</strong></div>'
             f'</div>',
             unsafe_allow_html=True,
         )
         with st.expander("👀 Ver contenido del correo enviado"):
-            body = build_email_body(st.session_state.student_name, total_pct, profile, section_results, tags)
-            st.text_area("", body, height=300, label_visibility="collapsed")
+            components.html(email_body, height=600, scrolling=True)
     elif email_status == "no_secrets":
         st.warning("⚠️ No se detectaron credenciales SMTP en Secrets. El correo no se envió automáticamente.")
         st.markdown("**Para activar el envío automático:** ve a Streamlit Cloud → Settings → Secrets y agrega las credenciales SMTP.")
@@ -1286,12 +1811,10 @@ elif st.session_state.stage == "results":
             with c2:
                 m_email = st.text_input("Email remitente")
                 m_pass = st.text_input("App Password", type="password")
-            if st.button("📬 Enviar Correo", type="primary", use_container_width=True):
+            if st.button("📬 Enviar Correo", type="primary", width="stretch"):
                 if m_email and m_pass:
-                    body = build_email_body(st.session_state.student_name, total_pct, profile, section_results, tags)
-                    subject = f"{profile['emoji']} Resultados: {profile['name']} ({total_pct}%) - FinPulse"
                     with st.spinner("Enviando..."):
-                        ok, err = send_email_smtp(st.session_state.student_email, subject, body, m_server, int(m_port), m_email, m_pass)
+                        ok, err = send_email_smtp(st.session_state.student_email, email_subject, email_body, m_server, int(m_port), m_email, m_pass)
                     if ok:
                         st.success(f"✅ Enviado a {st.session_state.student_email}")
                         st.session_state.email_sent = True
@@ -1302,86 +1825,140 @@ elif st.session_state.stage == "results":
                 else:
                     st.warning("⚠️ Completa email y contraseña")
         with copy_tab:
-            body = build_email_body(st.session_state.student_name, total_pct, profile, section_results, tags)
-            st.markdown(f"**Asunto:** {profile['emoji']} Tus Resultados: {profile['name']} ({total_pct}%) - FinPulse")
-            st.text_area("Copia este contenido:", body, height=350)
+            st.markdown(f"**Asunto:** {email_subject}")
+            st.text_area("Copia este contenido:", email_body, height=350)
     else:
         st.error(f"❌ Error al enviar correo: {email_status}")
         st.markdown("Puedes copiar el correo manualmente:")
-        body = build_email_body(st.session_state.student_name, total_pct, profile, section_results, tags)
-        st.text_area("", body, height=300, label_visibility="collapsed")
+        st.text_area("Correo HTML", email_body, height=300, label_visibility="collapsed")
 
     st.divider()
-    if st.button("🔄 Nueva Encuesta", use_container_width=True):
-        for k in ["stage", "answers", "current_section", "current_q", "student_name", "student_email", "email_sent", "email_status"]:
-            st.session_state[k] = {"stage": "welcome", "answers": {}, "current_section": 0, "current_q": 0, "student_name": "", "student_email": "", "email_sent": False, "email_status": ""}[k]
-        if "generated_email" in st.session_state:
-            del st.session_state.generated_email
+    if st.button("🔄 Nueva Encuesta", width="stretch"):
+        for k, v in SURVEY_DEFAULTS.items():
+            st.session_state[k] = v.copy() if isinstance(v, dict) else v
         st.rerun()
 
 # ══════════════════════════════════════════════
-# ADMIN PANEL
+# ADMIN PANEL (teacher)
 # ══════════════════════════════════════════════
 elif st.session_state.stage == "admin":
-    st.markdown("#### 📊 Panel de Administración")
-    st.caption("Registro de estudiantes que han completado la encuesta")
+    st.markdown("#### 📊 Panel del Docente")
 
-    students = st.session_state.all_students
+    if not st.session_state.admin_ok:
+        admin_pw = get_admin_password()
+        if not admin_pw:
+            st.warning(
+                "🔒 El panel está protegido porque contiene nombres y correos de los estudiantes. "
+                "Configura una contraseña en Secrets:"
+            )
+            st.code('[admin]\npassword = "tu-clave-de-docente"', language="toml")
+            st.caption("O define la variable de entorno FINPULSE_ADMIN_PASSWORD.")
+            st.stop()
+        pw = st.text_input("Contraseña de docente", type="password")
+        if st.button("Entrar", type="primary"):
+            if pw == admin_pw:
+                st.session_state.admin_ok = True
+                st.rerun()
+            st.error("Contraseña incorrecta")
+        st.stop()
 
-    if not students:
+    st.caption("Resultados acumulados de todos los estudiantes que completaron el diagnóstico")
+    df = load_results()
+
+    if df.empty:
         st.markdown(
-            '<div style="text-align:center;padding:48px 20px;color:rgba(255,255,255,0.3);">'
+            '<div style="text-align:center;padding:48px 20px;color:rgba(255,255,255,0.5);">'
             '<div style="font-size:40px;margin-bottom:12px;">📭</div>'
-            "<p>Aún no hay estudiantes registrados en esta sesión.</p></div>",
+            "<p>Aún no hay estudiantes registrados.</p></div>",
             unsafe_allow_html=True,
         )
     else:
-        scores = [s["score"] for s in students]
+        df["biases"] = df["biases"].fillna("")
+        scores = df["score"]
         st.markdown(
             f'<div class="stats-container">'
-            f'<div class="stat-item"><div class="stat-value" style="color:#4ECDC4;">{len(students)}</div><div class="stat-label">Total</div></div>'
-            f'<div class="stat-item"><div class="stat-value" style="color:#FFD93D;">{round(sum(scores)/len(scores))}%</div><div class="stat-label">Promedio</div></div>'
-            f'<div class="stat-item"><div class="stat-value" style="color:#10B981;">{max(scores)}%</div><div class="stat-label">Mejor</div></div>'
-            f'<div class="stat-item"><div class="stat-value" style="color:#EF4444;">{min(scores)}%</div><div class="stat-label">Menor</div></div>'
+            f'<div class="stat-item"><div class="stat-value" style="color:#4ECDC4;">{len(df)}</div><div class="stat-label">Total</div></div>'
+            f'<div class="stat-item"><div class="stat-value" style="color:#FFD93D;">{round(scores.mean())}%</div><div class="stat-label">Promedio</div></div>'
+            f'<div class="stat-item"><div class="stat-value" style="color:#10B981;">{scores.max()}%</div><div class="stat-label">Mejor</div></div>'
+            f'<div class="stat-item"><div class="stat-value" style="color:#EF4444;">{scores.min()}%</div><div class="stat-label">Menor</div></div>'
             f"</div>", unsafe_allow_html=True,
         )
 
-        # Distribution chart
-        fig_dist = go.Figure()
-        grade_counts = {"A+": 0, "A": 0, "B": 0, "C": 0, "D": 0}
-        grade_colors = {"A+": "#10B981", "A": "#3B82F6", "B": "#F59E0B", "C": "#EF4444", "D": "#DC2626"}
-        for s in students:
-            grade_counts[s["grade"]] = grade_counts.get(s["grade"], 0) + 1
-        for grade, count in grade_counts.items():
-            fig_dist.add_trace(go.Bar(x=[grade], y=[count], marker_color=grade_colors.get(grade, "#fff"), text=[count], textposition="outside",
-                textfont=dict(color="rgba(255,255,255,0.7)", size=13, family="Space Mono")))
-        fig_dist.update_layout(
-            title=dict(text="Distribución por Grado", font=dict(size=13, color="rgba(255,255,255,0.5)")),
-            paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-            height=220, showlegend=False,
-            yaxis=dict(gridcolor="rgba(255,255,255,0.04)", tickfont=dict(color="rgba(255,255,255,0.3)")),
-            xaxis=dict(tickfont=dict(color="rgba(255,255,255,0.5)", size=13)),
-            margin=dict(t=40, b=20, l=35, r=15), font={"family": "DM Sans"},
+        chart_layout = dict(
+            paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", showlegend=False,
+            yaxis=dict(gridcolor="rgba(255,255,255,0.04)", tickfont=dict(color="rgba(255,255,255,0.4)"), tickformat=",d"),
+            xaxis=dict(tickfont=dict(color="rgba(255,255,255,0.6)", size=11)),
+            font={"family": "DM Sans"},
         )
-        st.plotly_chart(fig_dist, use_container_width=True)
 
-        # Table
-        st.markdown(
-            '<div class="admin-header"><span>Nombre</span><span>Correo</span><span>Score</span><span>Grado</span><span>Fecha</span></div>',
-            unsafe_allow_html=True,
-        )
-        for s in students:
-            p = get_profile(s["score"])
+        col_a, col_b = st.columns(2)
+        with col_a:
+            # Class average per section
+            sec_cols = [s for s in SECTIONS if f"pct_{s['id']}" in df.columns]
+            avg = [round(df[f"pct_{s['id']}"].mean()) for s in sec_cols]
+            cats = [f'{s["icon"]} {s["title"]}' for s in sec_cols]
+            fig_cls = go.Figure(go.Scatterpolar(
+                r=avg + [avg[0]], theta=cats + [cats[0]], fill="toself",
+                fillcolor="rgba(255,217,61,0.15)", line=dict(color="#FFD93D", width=2),
+            ))
+            fig_cls.update_layout(
+                title=dict(text="Promedio del grupo por sección", font=dict(size=13, color="rgba(255,255,255,0.6)")),
+                polar=dict(bgcolor="rgba(0,0,0,0)",
+                           radialaxis=dict(range=[0, 100], tickfont=dict(size=8, color="rgba(255,255,255,0.3)"), gridcolor="rgba(255,255,255,0.06)"),
+                           angularaxis=dict(tickfont=dict(size=10, color="rgba(255,255,255,0.7)"), gridcolor="rgba(255,255,255,0.06)")),
+                paper_bgcolor="rgba(0,0,0,0)", height=320, margin=dict(t=50, b=30, l=90, r=90), font={"family": "DM Sans"},
+            )
+            st.plotly_chart(fig_cls, width="stretch")
+        with col_b:
+            arch_colors = {a["name"]: a["color"] for a in ARCHETYPES.values()}
+            counts = df["archetype"].value_counts()
+            fig_arch = go.Figure(go.Bar(
+                x=counts.index, y=counts.values, marker_color=[arch_colors.get(n, "#fff") for n in counts.index],
+                text=counts.values, textposition="outside", textfont=dict(color="rgba(255,255,255,0.8)", family="Space Mono"),
+            ))
+            fig_arch.update_layout(title=dict(text="Arquetipos del grupo", font=dict(size=13, color="rgba(255,255,255,0.6)")),
+                                   height=320, margin=dict(t=50, b=30, l=35, r=15), **chart_layout)
+            st.plotly_chart(fig_arch, width="stretch")
+
+        col_c, col_d = st.columns(2)
+        with col_c:
+            grade_counts = {g: int((df["grade"] == g).sum()) for g in ["A+", "A", "B", "C", "D"]}
+            grade_colors = {"A+": "#10B981", "A": "#3B82F6", "B": "#F59E0B", "C": "#EF4444", "D": "#DC2626"}
+            fig_dist = go.Figure(go.Bar(
+                x=list(grade_counts), y=list(grade_counts.values()), marker_color=[grade_colors[g] for g in grade_counts],
+                text=list(grade_counts.values()), textposition="outside", textfont=dict(color="rgba(255,255,255,0.8)", family="Space Mono"),
+            ))
+            fig_dist.update_layout(title=dict(text="Distribución por Grado", font=dict(size=13, color="rgba(255,255,255,0.6)")),
+                                   height=280, margin=dict(t=50, b=20, l=35, r=15), **chart_layout)
+            st.plotly_chart(fig_dist, width="stretch")
+        with col_d:
+            bias_counts = {BIASES[b]["name"]: int(df["biases"].str.split(";").apply(lambda xs: b in xs).sum()) for b in BIASES}
+            fig_bias = go.Figure(go.Bar(
+                y=list(bias_counts), x=list(bias_counts.values()), orientation="h", marker_color="#FF9F1C",
+                text=list(bias_counts.values()), textposition="outside", textfont=dict(color="rgba(255,255,255,0.8)", family="Space Mono"),
+            ))
+            fig_bias.update_layout(title=dict(text="Tácticas en las que más cae el grupo", font=dict(size=13, color="rgba(255,255,255,0.6)")),
+                                   height=280, margin=dict(t=50, b=20, l=10, r=30), **chart_layout)
+            st.plotly_chart(fig_bias, width="stretch")
+
+        # Discussion prompt for class
+        top_bias = max(bias_counts, key=bias_counts.get)
+        weakest_sec = sec_cols[avg.index(min(avg))] if sec_cols else None
+        if weakest_sec:
+            pct_bias = round(bias_counts[top_bias] / len(df) * 100)
             st.markdown(
-                f'<div class="admin-row">'
-                f'<span style="font-weight:600;">{s["name"]}</span>'
-                f'<span style="color:rgba(255,255,255,0.5);font-size:11px;">{s["email"]}</span>'
-                f'<span style="color:{p["color"]};font-family:\'Space Mono\',monospace;font-weight:700;">{s["score"]}%</span>'
-                f'<span style="padding:2px 8px;border-radius:6px;background:{p["color"]}20;color:{p["color"]};font-size:11px;font-weight:600;">{s["grade"]}</span>'
-                f'<span style="color:rgba(255,255,255,0.3);font-size:10px;">{s["timestamp"]}</span></div>',
+                f'<div class="lab-result">💡 <b>Insight para la clase:</b> el área más débil del grupo es '
+                f'<b>{weakest_sec["icon"]} {weakest_sec["title"]}</b> ({min(avg)}%) y la táctica más efectiva sobre el grupo es '
+                f'<b>{esc(top_bias)}</b> ({pct_bias}% de los estudiantes).<br>'
+                f'Pregunta para debatir: <i>¿qué responsabilidad ética tenemos como marketers al usar esta táctica, '
+                f'sabiendo que funciona incluso con nosotros?</i></div>',
                 unsafe_allow_html=True,
             )
 
-        df = pd.DataFrame(students)
+        st.markdown("")
+        show_cols = ["timestamp", "name", "email", "score", "grade", "profile", "archetype"]
+        st.dataframe(df[[c for c in show_cols if c in df.columns]].sort_values("timestamp", ascending=False),
+                     width="stretch", hide_index=True)
+
         csv = df.to_csv(index=False).encode("utf-8")
-        st.download_button("📥 Descargar CSV", csv, "finpulse_resultados.csv", "text/csv", use_container_width=True)
+        st.download_button("📥 Descargar CSV", csv, "finpulse_resultados.csv", "text/csv", width="stretch")
